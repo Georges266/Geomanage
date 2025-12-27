@@ -107,7 +107,7 @@ session_start();
             <li><a style="color: #ff0000; font-family: 'Work Sans', sans-serif; font-size: 12px; font-weight: 600; text-transform: uppercase; padding: 0 30px; height: 80px; line-height: 80px; text-decoration: none; transition: all 0.5s;" href="logout.php">Logout</a></li>
               <?php } ?>
               <?php if (isset($_SESSION['role']) && $_SESSION['role'] === "Sales_Person") { ?>
-                 <li><a href="admin-selling.php">Lands</a></li>
+                 <li><a href="sales_person.php">Lands</a></li>
                  <li><a href="projects.php">Projects</a></li>
                  <li><a href="land-sale.php">Lands</a></li>
                 <li><a style="color: #ff0000; font-family: 'Work Sans', sans-serif; font-size: 12px; font-weight: 600; text-transform: uppercase; padding: 0 30px; height: 80px; line-height: 80px; text-decoration: none; transition: all 0.5s;" href="logout.php">Logout</a></li>

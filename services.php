@@ -30,6 +30,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $area_size = mysqli_real_escape_string($con, $_POST['area_size'] ?? '');
         $land_number = mysqli_real_escape_string($con, $_POST['land_number'] ?? '');
         $land_type = mysqli_real_escape_string($con, $_POST['land_type'] ?? '');
+        $longitude = mysqli_real_escape_string($con, $_POST['longitude'] ?? '');
+        $latitude = mysqli_real_escape_string($con, $_POST['latitude'] ?? '');
         $land_description = mysqli_real_escape_string($con, $_POST['land_description'] ?? '');
         $area_numeric = (float)$area_size;
 
@@ -61,7 +63,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $insert_land = "INSERT INTO land 
                     (land_address, land_area, land_type, coordinates_latitude, coordinates_longitude, general_description, specific_location_notes, land_number) 
                     VALUES 
-                    ('$location', '$area_numeric', '$land_type', NULL, NULL, '$land_description', '', '$land_number')";
+                    ('$location', '$area_numeric', '$land_type', $latitude, $longitude, '$land_description', ' ', '$land_number')";
                 
                 if (mysqli_query($con, $insert_land)) {
                     $land_id = mysqli_insert_id($con);
@@ -73,11 +75,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Insert into service_request
             $status = 'Pending';
             $request_date = date('Y-m-d');
-
             $insert_request = "INSERT INTO service_request 
-                (status, cost, request_date, approval_status, rejection_reason, client_id, service_id, land_id, project_id) 
+                (status, request_date, approval_status, rejection_reason, client_id, service_id, land_id, project_id) 
                 VALUES 
-                ('$status', NULL, '$request_date', NULL, NULL, '$client_id', '$service_id', '$land_id', NULL)";
+                ('$status','$request_date', NULL, NULL, '$client_id', '$service_id', '$land_id', NULL)";
             
             if (mysqli_query($con, $insert_request)) {
                 $request_id = mysqli_insert_id($con);
@@ -470,7 +471,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <input type="text" class="form-control" name="location" placeholder="Address or coordinates of the property" required>
               </div>
             </div>
-
+            <!-- coordinates -->
+            <div class="form-group colum-row row">
+              <div class="col-md-6">
+              <label style="font-weight: 600; color: #263a4f; margin-bottom: 8px; display: block;">Latitude</label>
+              <input type="number" class="form-control" name="latitude" placeholder="e.g., 34.0522" step="0.0001" required>
+              <small style="color: #8d9aa8; margin-top: 5px; display: block;">Right-click on Google Maps to get coordinates</small>
+              </div>
+              <div class="col-md-6">
+              <label style="font-weight: 600; color: #263a4f; margin-bottom: 8px; display: block;">Longitude</label>
+              <input type="number" class="form-control" name="longitude" placeholder="e.g., -118.2437" step="0.0001" required>
+              <button type="button" class="btn btn-sm btn-secondary" id="get-location-btn" style="margin-top: 5px; padding: 5px 15px; font-size: 13px;">
+              <i class="fa fa-location-arrow"></i> Use My Location
+              </button>
+              <small style="color: #8d9aa8; margin-top: 5px; display: block;">Click this if you're currently at the property</small>
+              </div>
+              </div>
             <!-- Area size -->
             <div class="form-group colum-row row">
               <div class="col-md-6">
@@ -651,7 +667,65 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   </div>
 </section>
 <?php endif; ?>
+<script>
+// Auto-detect location button
+document.getElementById('get-location-btn').addEventListener('click', function() {
+    const btn = this;
+    const originalText = btn.innerHTML;
+    
+    // Check if geolocation is supported
+    if (!navigator.geolocation) {
+        alert('Geolocation is not supported by your browser');
+        return;
+    }
+    
+    // Show loading state
+    btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Getting location...';
+    btn.disabled = true;
+    
+    // Get current position
+    navigator.geolocation.getCurrentPosition(
+        function(position) {
+            // Success - fill in the coordinates
+            document.getElementById('latitude').value = position.coords.latitude.toFixed(4);
+            document.getElementById('longitude').value = position.coords.longitude.toFixed(4);
+            
+            btn.innerHTML = '<i class="fa fa-check"></i> Location Found!';
+            setTimeout(() => {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }, 2000);
+        },
+        function(error) {
+            // Error handling
+            let errorMsg = 'Unable to get location. ';
+            switch(error.code) {
+                case error.PERMISSION_DENIED:
+                    errorMsg += 'Please allow location access.';
+                    break;
+                case error.POSITION_UNAVAILABLE:
+                    errorMsg += 'Location information unavailable.';
+                    break;
+                case error.TIMEOUT:
+                    errorMsg += 'Request timed out.';
+                    break;
+                default:
+                    errorMsg += 'An unknown error occurred.';
+            }
+            alert(errorMsg);
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        },
+        {
+            enableHighAccuracy: true,
+            timeout: 30000, // 30 seconds timeout for geolocation
+            maximumAge: 0
+        }
+    );
+});
 
+
+</script>
 <?php include 'includes/footer.html'; ?>
 
 </body>
