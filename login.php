@@ -36,7 +36,7 @@ if (mysqli_num_rows($result) === 1) {
             header("Location: hr-applications.php");
         }
         else if ($row['role'] === "Sales_Person") {
-            header("Location: admin-selling.php");
+            header("Location: sales_person.php");
         }
         else if ($row['role'] === "Maintenance_Technician") {
             header("Location: maintenance.php");
