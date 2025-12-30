@@ -142,7 +142,7 @@ if ($has_active_project) {
             $allowed = array('pdf', 'dwg', 'dxf', 'doc', 'docx');
             
             if (in_array($file_ext, $allowed)) {
-                $upload_dir = "uploads/deliverables/";
+                $upload_dir = "deliverables/";
                 if (!file_exists($upload_dir)) {
                     mkdir($upload_dir, 0777, true);
                 }
