@@ -31,6 +31,15 @@ if (!$result) {
     exit;
 }
 
+// Add the "Add New Equipment" button at the top
+echo '<div class="row mb-3">
+        <div class="col-12 text-end">
+            <button class="btn btn-success" id="addEquipmentBtn">
+                <i class="fas fa-plus"></i> Add New Equipment
+            </button>
+        </div>
+      </div>'; 
+
 if (mysqli_num_rows($result) == 0) {
     echo "<div class='col-12'><p class='text-center text-muted my-3'>No equipment found.</p></div>";
 } else {
@@ -49,8 +58,8 @@ if (mysqli_num_rows($result) == 0) {
         $project_name  = $row['project_name'] ? htmlspecialchars($row['project_name']) : null;
         $lead_name     = $row['lead_engineer_name'] ? htmlspecialchars($row['lead_engineer_name']) : null;
 
-        $maintenance   = $row['maintenance_date']
-            ? date("M d, Y", strtotime($row['maintenance_date']))
+        $maintenance   = $row['date']
+            ? date("M d, Y", strtotime($row['date']))
             : 'N/A';
 
         $statusClass = 'status-' . strtolower(str_replace(' ', '-', $status));
@@ -83,7 +92,7 @@ if (mysqli_num_rows($result) == 0) {
                     </p>
 
                     <p style="font-size: 12px; margin: 3px 0; color: #666;">
-                        <strong>Last Maintenance:</strong> <?php echo $maintenance; ?>
+                        <strong>Purchase Date:</strong> <?php echo $maintenance; ?>
                     </p>
 
                     <?php if ($project_id && $lead_name): ?>

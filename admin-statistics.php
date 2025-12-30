@@ -33,6 +33,10 @@ $revenueData = mysqli_fetch_all($result, MYSQLI_ASSOC);
     <title>Revenue & Analytics Dashboard</title>
     <!-- Load Chart.js in head -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Add these in the <head> section -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 <div class="site-preloader-wrap">
@@ -56,7 +60,7 @@ $revenueData = mysqli_fetch_all($result, MYSQLI_ASSOC);
 <section class="padding">
     <div class="container">
         <!-- Key Metrics Summary -->
-        <div class="row mb-40">
+       <!-- <div class="row mb-40">
             <div class="col-md-3 padding-10">
                 <div class="metric-card box-shadow text-center" style="padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 8px;">
                     <i class="fas fa-dollar-sign" style="font-size: 36px; margin-bottom: 15px;"></i>
@@ -89,7 +93,7 @@ $revenueData = mysqli_fetch_all($result, MYSQLI_ASSOC);
                     <small style="opacity: 0.8;">+5% improvement</small>
                 </div>
             </div>
-        </div>
+        </div> -->
 
         <!-- Charts and Graphs Row -->
         <div class="row mb-40">
@@ -362,9 +366,7 @@ $revenueData = mysqli_fetch_all($result, MYSQLI_ASSOC);
                         <button class="default-btn">
                             <i class="fas fa-file-excel"></i> Export Excel Data
                         </button>
-                        <button class="default-btn">
-                            <i class="fas fa-chart-bar"></i> Generate Custom Report
-                        </button>
+                       
                     </div>
                 </div>
             </div>
@@ -734,6 +736,218 @@ document.addEventListener('DOMContentLoaded', function() {
             loadMonthlyPerformance(this.value);
         });
     }
+});
+
+
+// ==========================================
+// PDF EXPORT FUNCTIONALITY
+// ==========================================
+async function exportToPDF() {
+    // Show loading indicator
+    const loadingMsg = document.createElement('div');
+    loadingMsg.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.8); color: white; padding: 20px 40px; border-radius: 10px; z-index: 99999; font-size: 16px;';
+    loadingMsg.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating PDF Report...';
+    document.body.appendChild(loadingMsg);
+
+    try {
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        
+        // Get current date for report
+        const reportDate = new Date().toLocaleDateString('en-US', { 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+        });
+        
+        let yPosition = 20;
+        
+        // Title
+        pdf.setFontSize(20);
+        pdf.setTextColor(40, 58, 79);
+        pdf.text('Revenue & Analytics Dashboard', 105, yPosition, { align: 'center' });
+        
+        yPosition += 10;
+        pdf.setFontSize(12);
+        pdf.setTextColor(100, 100, 100);
+        pdf.text(`Report Generated: ${reportDate}`, 105, yPosition, { align: 'center' });
+        
+        yPosition += 15;
+        
+        // Capture charts as images
+        const charts = ['revenueChart', 'expensesChart', 'revenueSourceChart'];
+        
+        for (const chartId of charts) {
+            const chartCanvas = document.getElementById(chartId);
+            if (chartCanvas) {
+                const chartContainer = chartCanvas.parentElement;
+                
+                // Capture chart as image
+                const canvas = await html2canvas(chartContainer, {
+                    scale: 2,
+                    backgroundColor: '#ffffff'
+                });
+                
+                const imgData = canvas.toDataURL('image/png');
+                const imgWidth = 180;
+                const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                
+                // Check if we need a new page
+                if (yPosition + imgHeight > 270) {
+                    pdf.addPage();
+                    yPosition = 20;
+                }
+                
+                pdf.addImage(imgData, 'PNG', 15, yPosition, imgWidth, imgHeight);
+                yPosition += imgHeight + 10;
+            }
+        }
+        
+        // Add Monthly Performance Table
+        pdf.addPage();
+        yPosition = 20;
+        
+        pdf.setFontSize(16);
+        pdf.setTextColor(40, 58, 79);
+        pdf.text('Monthly Performance Summary', 15, yPosition);
+        yPosition += 10;
+        
+        // Get table data
+        const tableBody = document.getElementById('performanceTableBody');
+        const rows = tableBody.querySelectorAll('tr');
+        
+        pdf.setFontSize(10);
+        pdf.setTextColor(0, 0, 0);
+        
+        // Table headers
+        pdf.setFont(undefined, 'bold');
+        pdf.text('Month', 15, yPosition);
+        pdf.text('Revenue', 55, yPosition);
+        pdf.text('Expenses', 95, yPosition);
+        pdf.text('Profit', 135, yPosition);
+        pdf.text('Margin', 175, yPosition);
+        yPosition += 7;
+        
+        // Table data
+        pdf.setFont(undefined, 'normal');
+        rows.forEach(row => {
+            const cells = row.querySelectorAll('td');
+            if (cells.length === 5) {
+                pdf.text(cells[0].textContent, 15, yPosition);
+                pdf.text(cells[1].textContent, 55, yPosition);
+                pdf.text(cells[2].textContent, 95, yPosition);
+                pdf.text(cells[3].textContent, 135, yPosition);
+                pdf.text(cells[4].textContent, 175, yPosition);
+                yPosition += 7;
+                
+                if (yPosition > 270) {
+                    pdf.addPage();
+                    yPosition = 20;
+                }
+            }
+        });
+        
+        // Save PDF
+        pdf.save(`Dashboard_Report_${new Date().toISOString().split('T')[0]}.pdf`);
+        
+    } catch (error) {
+        console.error('Error generating PDF:', error);
+        alert('Error generating PDF: ' + error.message);
+    } finally {
+        document.body.removeChild(loadingMsg);
+    }
+}
+
+// ==========================================
+// EXCEL EXPORT FUNCTIONALITY
+// ==========================================
+function exportToExcel() {
+    try {
+        const wb = XLSX.utils.book_new();
+        
+        // ===== Sheet 1: Monthly Performance =====
+        const performanceData = [];
+        const tableBody = document.getElementById('performanceTableBody');
+        const rows = tableBody.querySelectorAll('tr');
+        
+        // Add headers
+        performanceData.push(['Month', 'Revenue', 'Expenses', 'Profit', 'Margin']);
+        
+        // Add data rows
+        rows.forEach(row => {
+            const cells = row.querySelectorAll('td');
+            if (cells.length === 5) {
+                performanceData.push([
+                    cells[0].textContent.trim(),
+                    cells[1].textContent.trim(),
+                    cells[2].textContent.trim(),
+                    cells[3].textContent.trim(),
+                    cells[4].textContent.trim()
+                ]);
+            }
+        });
+        
+        const ws1 = XLSX.utils.aoa_to_sheet(performanceData);
+        XLSX.utils.book_append_sheet(wb, ws1, 'Monthly Performance');
+        
+        // ===== Sheet 2: Service Revenue =====
+        const serviceData = [];
+        serviceData.push(['Service Name', 'Revenue', 'Percentage']);
+        
+        const serviceItems = document.querySelectorAll('.performance-item');
+        serviceItems.forEach(item => {
+            const serviceName = item.querySelector('span:first-child').textContent.trim();
+            const revenue = item.querySelector('span[style*="font-weight: 600; color"]').textContent.trim();
+            const percentage = item.querySelector('small').textContent.trim();
+            
+            serviceData.push([serviceName, revenue, percentage]);
+        });
+        
+        const ws2 = XLSX.utils.aoa_to_sheet(serviceData);
+        XLSX.utils.book_append_sheet(wb, ws2, 'Service Revenue');
+        
+        // ===== Sheet 3: Summary =====
+        const summaryData = [
+            ['Dashboard Report Summary'],
+            [''],
+            ['Report Generated:', new Date().toLocaleString()],
+            ['Period:', document.getElementById('performanceYear')?.value || 'Current Year'],
+            [''],
+            ['Note:', 'This report contains financial data exported from the dashboard']
+        ];
+        
+        const ws3 = XLSX.utils.aoa_to_sheet(summaryData);
+        XLSX.utils.book_append_sheet(wb, ws3, 'Summary');
+        
+        // Generate and download
+        const fileName = `Dashboard_Report_${new Date().toISOString().split('T')[0]}.xlsx`;
+        XLSX.writeFile(wb, fileName);
+        
+        alert('Excel report generated successfully!');
+        
+    } catch (error) {
+        console.error('Error generating Excel:', error);
+        alert('Error generating Excel: ' + error.message);
+    }
+}
+
+// ==========================================
+// ATTACH TO BUTTONS
+// ==========================================
+document.addEventListener('DOMContentLoaded', function() {
+    const exportButtons = document.querySelectorAll('.export-actions .default-btn');
+    
+    exportButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const btnText = this.textContent.trim();
+            
+            if (btnText.includes('PDF')) {
+                exportToPDF();
+            } else if (btnText.includes('Excel')) {
+                exportToExcel();
+            }
+        });
+    });
 });
 
 </script>

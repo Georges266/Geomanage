@@ -108,6 +108,74 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== "Admin") {
     </div>
 </div>
 
+
+<!-- Add Equipment Modal -->
+<div id="addEquipmentModal" class="land-modal" style="display: none;">
+    <div class="land-modal-content" style="max-width: 650px;">
+        <div class="land-modal-header">
+            <h3><i class="fas fa-plus-circle"></i> Add New Equipment</h3>
+            <span class="land-modal-close" onclick="closeModal('addEquipmentModal')">&times;</span>
+        </div>
+        <div class="land-modal-body">
+            <form id="addEquipmentForm">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Equipment Name *</label>
+                            <input type="text" class="form-control" name="equipment_name" id="equipment_name" required placeholder="e.g., Total Station">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Equipment Type *</label>
+                            <input type="text" class="form-control" name="equipment_type" id="equipment_type" required placeholder="e.g., Surveying Equipment">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Serial Number</label>
+                            <input type="text" class="form-control" name="serial_number" id="serial_number" placeholder="e.g., SN123456">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Model</label>
+                            <input type="text" class="form-control" name="model" id="model" placeholder="e.g., Leica TS16">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Cost ($)</label>
+                            <input type="number" class="form-control" name="cost" id="cost" step="0.01" min="0" placeholder="0.00">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Purchase Date</label>
+                            <input type="date" class="form-control" name="date" id="date" value="<?php echo date('Y-m-d'); ?>">
+                        </div>
+                    </div>
+                </div>
+
+            </form>
+        </div>
+        <div class="land-modal-footer" style="padding: 20px; border-top: 1px solid #ddd; text-align: right; display: flex; gap: 10px; justify-content: flex-end;">
+            <button type="button" class="btn btn-secondary" onclick="closeModal('addEquipmentModal')">
+                <i class="fas fa-times"></i> Cancel
+            </button>
+            <button type="button" class="btn btn-success" id="confirmAddEquipmentBtn">
+                <i class="fas fa-check"></i> Add Equipment
+            </button>
+        </div>
+    </div>
+</div>
+
 <!-- Success Message Modal -->
 <div id="successModal" class="land-modal">
     <div class="land-modal-content" style="max-width: 350px;">
@@ -179,6 +247,63 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== "Admin") {
 .land-modal-close {
     cursor: pointer;
     font-size: 24px;
+}
+
+#addEquipmentModal .form-group {
+    margin-bottom: 15px;
+}
+
+#addEquipmentModal .form-group label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 5px;
+    color: #263a4f;
+    font-size: 13px;
+}
+
+#addEquipmentModal .form-control {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 14px;
+    transition: border-color 0.3s;
+}
+
+#addEquipmentModal .form-control:focus {
+    outline: none;
+    border-color: #ff7607;
+    box-shadow: 0 0 0 3px rgba(255, 118, 7, 0.1);
+}
+
+#addEquipmentModal .btn {
+    padding: 10px 20px;
+    border-radius: 5px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    transition: all 0.3s;
+}
+
+#addEquipmentModal .btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+#addEquipmentModal .btn-secondary:hover {
+    background: #5a6268;
+}
+
+#addEquipmentModal .btn-success {
+    background: #28a745;
+    color: white;
+}
+
+#addEquipmentModal .btn-success:hover {
+    background: #218838;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
 }
 </style>
 
@@ -284,13 +409,19 @@ $(document).on('click', '.viewEquipmentDetailsBtn', function() {
 });
 
 
-// SCHEDULE MAINTENANCE
-
+/// SCHEDULE MAINTENANCE (UPDATED)
 function scheduleMaintenanceCurrent(equipmentId) {
-    const maintenanceNote = $('#maintenanceNote').val().trim();
-    
-    if (!maintenanceNote) {
-        alert('Please enter maintenance notes before scheduling.');
+
+    const maintenanceType = $('#maintenanceType').val().trim();
+    const maintenanceDescription = $('#maintenanceDescription').val().trim();
+
+    if (!maintenanceType) {
+        alert('Please enter the maintenance type.');
+        return;
+    }
+
+    if (!maintenanceDescription) {
+        alert('Please enter the maintenance description.');
         return;
     }
 
@@ -303,11 +434,11 @@ function scheduleMaintenanceCurrent(equipmentId) {
         type: 'POST',
         data: {
             equipment_id: equipmentId,
-            maintenance_note: maintenanceNote
+            maintenance_type: maintenanceType,
+            maintenance_description: maintenanceDescription
         },
-        success: function(response) {
-            // Because PHP now returns plain text, no JSON parse needed
-            if (response.includes("successfully")) {
+        success: function (response) {
+            if (response.toLowerCase().includes("successfully")) {
                 showSuccess('Maintenance Scheduled', response);
                 closeModal('equipmentDetailsModal');
 
@@ -318,11 +449,12 @@ function scheduleMaintenanceCurrent(equipmentId) {
                 alert("Error: " + response);
             }
         },
-        error: function() {
+        error: function () {
             alert('Error scheduling maintenance. Please try again.');
         }
     });
 }
+
 
 // Approve equipment request
 $(document).on('click', '.approveRequestBtn', function() {
@@ -407,6 +539,66 @@ $(document).on('click', '.unassignEquipmentBtn', function() {
     });
 });
 
+// Open Add Equipment Modal
+$(document).on('click', '#addEquipmentBtn', function() {
+    openModal('addEquipmentModal');
+});
+
+// Handle Add Equipment Form Submission
+$(document).on('click', '#confirmAddEquipmentBtn', function() {
+    // Get form data
+    const equipmentName = $('#equipment_name').val().trim();
+    const equipmentType = $('#equipment_type').val().trim();
+    const serialNumber = $('#serial_number').val().trim();
+    const model = $('#model').val().trim();
+    const cost = $('#cost').val().trim();
+    const date = $('#date').val().trim();
+    const status = $('#status').val();
+    
+    // Validate required fields
+    if (!equipmentName || !equipmentType) {
+        alert('Please fill in all required fields (Equipment Name and Type)');
+        return;
+    }
+    
+    // Disable button to prevent double submission
+    $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Adding...');
+    
+    $.ajax({
+        url: 'admin-equipment-add-query.php',
+        type: 'POST',
+        data: {
+            equipment_name: equipmentName,
+            equipment_type: equipmentType,
+            serial_number: serialNumber,
+            model: model,
+            cost: cost,
+            date: date,
+            status: status
+        },
+        success: function(response) {
+            console.log('Response:', response);
+            if (response.trim() === 'success') {
+                showSuccess('Equipment Added', 'New equipment has been added successfully!');
+                closeModal('addEquipmentModal');
+                $('#addEquipmentForm')[0].reset();
+                setTimeout(() => {
+                    loadEquipment();
+                }, 1500);
+            } else {
+                alert('Error: ' + response);
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error('AJAX Error:', error);
+            alert('Error adding equipment. Please try again.');
+        },
+        complete: function() {
+            // Re-enable button
+            $('#confirmAddEquipmentBtn').prop('disabled', false).html('<i class="fas fa-check"></i> Add Equipment');
+        }
+    });
+});
 
 // ============================================
 // SHOW SUCCESS MESSAGE

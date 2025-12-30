@@ -31,7 +31,7 @@ if (!$checkResult || mysqli_num_rows($checkResult) == 0) {
 // Update equipment to maintenance status
 $sql = "UPDATE equipment
         SET maintenance_note = '$maintenance_note',
-            maintenance_date = '$maintenance_date',
+            request_date = '$maintenance_date',
             status = 'maintenance'
         WHERE equipment_id = $equipment_id";
 

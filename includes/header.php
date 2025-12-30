@@ -76,7 +76,7 @@ session_start();
                 <li><a href="admin-statistics.php">Statistics</a></li>
                 <li><a href="admin-services.php">Services</a></li>
                 <li><a href="admin-project.php">Projects</a></li>
-                <li><a href="land-sale.php">Land For Sale</a></li>
+                <li><a href="admin-equipment.php">Equipment</a></li>
                 <li><a style="color: #ff0000; font-family: 'Work Sans', sans-serif; font-size: 12px; font-weight: 600; text-transform: uppercase; padding: 0 30px; height: 80px; line-height: 80px; text-decoration: none; transition: all 0.5s;" href="logout.php">Logout</a></li>
             <?php } ?>
               <?php if (isset($_SESSION['role']) && $_SESSION['role'] === "HR") { ?>
@@ -91,9 +91,9 @@ session_start();
              <?php if (isset($_SESSION['role']) && $_SESSION['role'] === "LeadEngineer") { ?>
              <li><a href="lead_eng-dashboard.php"> my projects</a></li>
             <li><a href="lead_eng-equipment.php">equipment</a></li>   
-            <li><a href="lead_eng-reviewdeliverables.php">deliverables</a></li> 
+            <!--<li><a href="lead_eng-reviewdeliverables.php">deliverables</a></li> 
              <li><a href="projects.php">Projects</a></li>
-            <li><a href="land-sale.php">Lands</a></li>
+            <li><a href="land-sale.php">Lands</a></li>-->
             <li><a style="color: #ff0000; font-family: 'Work Sans', sans-serif; font-size: 12px; font-weight: 600; text-transform: uppercase; padding: 0 30px; height: 80px; line-height: 80px; text-decoration: none; transition: all 0.5s;" href="logout.php">Logout</a></li>
             <?php } ?>
              <?php if (isset($_SESSION['role']) && $_SESSION['role'] === "Maintenance_Technician") { ?>

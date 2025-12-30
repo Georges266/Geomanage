@@ -36,7 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['project_id'], $_POST[
 
 // 🔹 Load equipment list
 $query = "SELECT equipment.equipment_id, equipment.equipment_name, equipment.status, 
-          equipment.maintenance_note, equipment.maintenance_date, project.project_name
+           equipment.date, project.project_name
           FROM equipment
           JOIN uses_project_equipment ON uses_project_equipment.equipment_id = equipment.equipment_id
           JOIN project ON project.project_id = uses_project_equipment.project_id
@@ -65,14 +65,7 @@ if ($equipmentResult && mysqli_num_rows($equipmentResult) > 0) {
                 Assigned to: <?php echo htmlspecialchars($project_name); ?>
             </p>
            
-            <?php if (strtolower($equipment_status) == 'maintenance' && $equipment['maintenance_note']) { ?>
-                <p style="font-size: 11px; margin: 5px 0 0 0; color: #666;">
-                    <strong>Issue:</strong> <?php echo htmlspecialchars($equipment['maintenance_note']); ?>
-                </p>
-                <p style="font-size: 10px; margin: 0; color: #999;">
-                    Reported: <?php echo date('M d, Y', strtotime($equipment['maintenance_date'])); ?>
-                </p>
-            <?php } ?>
+            
         </div>
         <button class="dl-btn report-issue-btn" 
                 type="button"

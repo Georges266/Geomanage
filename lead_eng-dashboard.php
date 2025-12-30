@@ -30,6 +30,16 @@ $result = mysqli_query($con, $query);
 $row = mysqli_fetch_assoc($result);
 $total_projects = $row['total_projects'];
 ?>
+<?php
+// Get active projects
+$query = "SELECT COUNT(*) AS total_projects_active 
+          FROM project
+          WHERE project.status = 'active' AND lead_engineer_id = $lead_engineer_id";
+$result = mysqli_query($con, $query);
+$row = mysqli_fetch_assoc($result);
+$total_projects_active = $row['total_projects_active'];
+
+?>
 
 
 
@@ -55,22 +65,12 @@ $total_projects = $row['total_projects'];
             <div class="col-lg-4 text-right">
                 <div class="engineer-info">
                     <strong>Lead Engineer: <?php echo $name ?></strong><br>
-                    <small>Assigned Projects: <?php echo $total_projects ?></small>
+                    <small>Assigned Projects: <?php echo $total_projects_active ?></small>
                 </div>
             </div>
         </div>
     </div>
 </section>
-<?php
-// Get active projects
-$query = "SELECT COUNT(*) AS total_projects_active 
-          FROM project
-          WHERE project.status = 'active' AND lead_engineer_id = $lead_engineer_id";
-$result = mysqli_query($con, $query);
-$row = mysqli_fetch_assoc($result);
-$total_projects_active = $row['total_projects_active'];
-
-?>
 
 <?php
 // Get completed projects
@@ -89,8 +89,8 @@ $total_projects_completed = $row['total_projects_active'];
         <div class="row">
             <div class="col-12">
                 <div class="tab-navigation mb-40">
-                    <button class="tab-btn active" data-status="active">Active Projects (<?php echo $total_projects_active ?>)</button>
-                    <button class="tab-btn" data-status="completed">Completed Projects (<?php echo $total_projects_completed ?>)</button>
+                    <button class="tab-btn active" data-status="active">Active Projects </button>
+                    <button class="tab-btn" data-status="completed">Completed Projects </button>
                 </div>
             </div>
         </div>
@@ -1114,14 +1114,27 @@ function addSingleEquipment(equipmentId) {
         project_id: projectId, 
         equipment_id: equipmentId
     }, function(response) {
-        if (response.trim() === 'success') {
-            alert('Equipment requested successfully!');
+        const trimmedResponse = response.trim();
+        
+        console.log('Equipment request response:', trimmedResponse); // Debug log
+        
+        if (trimmedResponse === 'success') {
+            $('#successMessage').text('Equipment Requested!');
+            $('#successDetails').text('Equipment has been requested successfully');
+            openModal('successModal');
             reloadEquipmentModal(projectId);
+        } else if (trimmedResponse === 'already assigned') {
+            alert('This equipment is already assigned to this project');
+        } else if (trimmedResponse === 'equipment not available') {
+            alert('This equipment is currently not available');
+        } else if (trimmedResponse === 'unauthorized') {
+            alert('You do not have permission to modify this project');
         } else {
-            alert('Error adding equipment to project');
+            alert('Error: ' + trimmedResponse);
         }
-    }).fail(function() {
-        alert('Error adding equipment. Please try again.');
+    }).fail(function(xhr, status, error) {
+        console.error('AJAX Error:', error);
+        alert('Error connecting to server. Please try again.');
     });
 }
 
