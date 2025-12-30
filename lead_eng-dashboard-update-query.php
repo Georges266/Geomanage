@@ -15,7 +15,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 /* 3. Get data */
 $project_id = (int)($_POST['project_id'] ?? 0);
 $progress   = (int)($_POST['progress'] ?? 0);
-$status_in  = $_POST['status'] ?? ''; // optional (e.g. checkbox or hidden)
+$status_in  = $_POST['status'] ?? ''; // User's selected status from modal
 
 /* 4. Validate */
 if ($project_id <= 0) {
@@ -24,6 +24,10 @@ if ($project_id <= 0) {
 
 if ($progress < 0 || $progress > 100) {
     die('Progress must be between 0 and 100');
+}
+
+if (!in_array($status_in, ['active', 'completed'])) {
+    die('Invalid status');
 }
 
 /* 5. Get lead engineer ID */
@@ -47,17 +51,20 @@ if (mysqli_num_rows($check) == 0) {
     die('You do not have permission to update this project');
 }
 
-/* 7. BUSINESS LOGIC (automatic sync) */
+/* 7. BUSINESS LOGIC - REVISED */
 
-// If status is marked completed → force progress to 100
-if ($status_in === 'completed') {
+// Use the user's selected status directly
+$status = $status_in;
+
+// If user selects "completed", enforce progress = 100
+if ($status === 'completed' && $progress < 100) {
     $progress = 100;
 }
 
-// If progress is 100 → completed, else active
-$status = ($progress == 100) ? 'completed' : 'active';
+// If user selects "active" but progress is 100, allow it (they're reopening the project)
+// No forced status change based on progress
 
-/* 8. Single UPDATE */
+/* 8. Update project */
 $update = mysqli_query($con, "
     UPDATE project
     SET progress = $progress,
@@ -66,7 +73,31 @@ $update = mysqli_query($con, "
     AND lead_engineer_id = $lead_engineer_id
 ");
 
-/* 9. Result */
+/* 9. If project completed → free equipment & surveyors */
+if ($update && $status === 'completed') {
+    // 9a. Free equipment & remove from uses_project_equipment
+    mysqli_query($con, "
+        UPDATE equipment e
+        JOIN uses_project_equipment pe ON e.equipment_id = pe.equipment_id
+        SET e.status = 'available'
+        WHERE pe.project_id = $project_id
+    ");
+
+    mysqli_query($con, "
+        DELETE FROM uses_project_equipment
+        WHERE project_id = $project_id
+    ");
+
+    // 9b. Free surveyors by setting project_id to NULL
+    mysqli_query($con, "
+        UPDATE surveyor
+        SET project_id = NULL,
+            status = 'available'
+        WHERE project_id = $project_id
+    ");
+}
+
+/* 10. Result */
 if ($update) {
     echo 'Project updated successfully';
 } else {

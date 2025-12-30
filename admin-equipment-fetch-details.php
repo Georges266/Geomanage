@@ -17,9 +17,23 @@ if (!isset($_POST['equipment_id'])) {
 $equipment_id = (int)$_POST['equipment_id'];
 
 // ============================================
-// FETCH EQUIPMENT BASIC INFO
+// FETCH EQUIPMENT BASIC INFO WITH LATEST MAINTENANCE
 // ============================================
-$equipmentQuery = "SELECT * FROM equipment WHERE equipment_id = $equipment_id";
+$equipmentQuery = "SELECT 
+    e.equipment_id,
+    e.equipment_name,
+    e.status AS equipment_status,
+    m.maintenance_date,
+    m.maintenance_type,
+    m.description,
+    m.total_cost,
+    m.bill_file_path
+FROM equipment e
+LEFT JOIN maintenance m ON e.equipment_id = m.equipment_id
+WHERE e.equipment_id = $equipment_id
+ORDER BY m.maintenance_date DESC
+LIMIT 1";
+
 $equipmentResult = mysqli_query($con, $equipmentQuery);
 
 if (!$equipmentResult || mysqli_num_rows($equipmentResult) === 0) {
@@ -32,9 +46,15 @@ $equipment = mysqli_fetch_assoc($equipmentResult);
 // Extract equipment data
 $id               = (int)$equipment['equipment_id'];
 $name             = htmlspecialchars($equipment['equipment_name']);
-$status           = htmlspecialchars($equipment['status']);
-$maintenance_date = $equipment['maintenance_date'];
-$maintenance_note = htmlspecialchars($equipment['maintenance_note'] ?? '');
+$status           = htmlspecialchars($equipment['equipment_status']);
+$maintenance_date = $equipment['maintenance_date'] ?? null;
+$maintenance_type = htmlspecialchars($equipment['maintenance_type'] ?? '');
+$maintenance_description = htmlspecialchars($equipment['description'] ?? '');
+$total_cost = $equipment['total_cost'] ?? null;
+$bill_file_path = $equipment['bill_file_path'] ?? null;
+
+// Check if last maintenance is completed
+$isCompleted = !empty($maintenance_date);
 
 // ============================================
 // FETCH PROJECT AND LAND ASSIGNMENT
@@ -75,9 +95,7 @@ $hasAssignments = ($assignmentResult && mysqli_num_rows($assignmentResult) > 0);
                 </p>
                 <p style="margin-bottom: 0;">
                     <strong style="color: #263a4f;">Current Status:</strong> 
-                    <span class="status-badge status-<?php echo strtolower(str_replace(' ', '-', $status)); ?>">
-                        <?php echo $status; ?>
-                    </span>
+                    <span class="status-badge status-<?php echo strtolower($status); ?>"><?php echo $status; ?></span>
                 </p>
             </div>
 
@@ -167,29 +185,103 @@ $hasAssignments = ($assignmentResult && mysqli_num_rows($assignmentResult) > 0);
                 <i class="fas fa-wrench"></i> Maintenance Information
             </h5>
             
-            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
-                <p style="margin-bottom: 8px;">
-                    <strong style="color: #263a4f;">Last Maintenance Date:</strong> 
-                    <span style="color: #555;">
-                        <?php echo $maintenance_date ? date("M d, Y", strtotime($maintenance_date)) : 'N/A'; ?>
-                    </span>
-                </p>
-                <p style="margin-bottom: 0;">
-                    <strong style="color: #263a4f;">Last Maintenance Note:</strong><br>
-                    <span style="font-style: italic; color: #666; display: block; margin-top: 5px; padding: 10px; background: white; border-left: 3px solid #ff7607; border-radius: 4px;">
-                        <?php echo $maintenance_note ? $maintenance_note : 'No notes available'; ?>
-                    </span>
-                </p>
-            </div>
+            <?php if ($isCompleted): ?>
+                <!-- Show completed maintenance details -->
+                <div style="background: #d4edda; padding: 15px; border-left: 3px solid #28a745; border-radius: 8px; margin-bottom: 15px;">
+                    <p style="margin-bottom: 8px;">
+                        <strong style="color: #155724;"><i class="fas fa-check-circle"></i> Status:</strong>
+                        <span style="color: #155724; font-weight: 600;"> Completed</span>
+                    </p>
+                    <p style="margin-bottom: 0;">
+                        <strong style="color: #155724;">Last Maintenance Date:</strong>
+                        <span style="color: #155724;"><?php echo date("M d, Y", strtotime($maintenance_date)); ?></span>
+                    </p>
+                </div>
 
-            <?php if (in_array(strtolower($status), ['available', 'assigned'])): ?>
-            <div class="form-group">
-                <label for="maintenanceNote" style="font-weight: 600; display: block; margin-bottom: 8px; color: #263a4f;">
-                    <i class="fas fa-edit"></i> New Maintenance Notes:
-                </label>
-                <textarea id="maintenanceNote" class="form-control" rows="4" 
-                          placeholder="Add maintenance notes..." 
-                          style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px;"></textarea>
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                    <p style="margin-bottom: 8px;">
+                        <strong style="color: #263a4f;">Maintenance Type:</strong><br>
+                        <span style="font-style: italic; color: #666; display: block; margin-top: 5px; padding: 10px; background: white; border-left: 3px solid #ff7607; border-radius: 4px;">
+                            <?php echo $maintenance_type ? $maintenance_type : 'No type specified'; ?>
+                        </span>
+                    </p>
+                    
+                    <p style="margin-bottom: 8px;">
+                        <strong style="color: #263a4f;">Description:</strong><br>
+                        <span style="font-style: italic; color: #666; display: block; margin-top: 5px; padding: 10px; background: white; border-left: 3px solid #ff7607; border-radius: 4px;">
+                            <?php echo $maintenance_description ? $maintenance_description : 'No description provided'; ?>
+                        </span>
+                    </p>
+
+                    <?php if ($total_cost): ?>
+                    <p style="margin-bottom: 8px;">
+                        <strong style="color: #263a4f;"><i class="fas fa-dollar-sign"></i> Total Cost:</strong>
+                        <span style="font-size: 16px; color: #28a745; font-weight: 600;">
+                            $<?php echo number_format($total_cost, 2); ?>
+                        </span>
+                    </p>
+                    <?php endif; ?>
+
+                    <?php if ($bill_file_path): ?>
+                    <p style="margin-bottom: 0;">
+                        <strong style="color: #263a4f;"><i class="fas fa-file-invoice"></i> Bill/Receipt:</strong><br>
+                        <a href="uploads/bills/<?php echo htmlspecialchars($bill_file_path); ?>" 
+                           target="_blank" 
+                           class="btn btn-sm btn-info"
+                           style="margin-top: 10px; display: inline-block;">
+                            <i class="fas fa-download"></i> View Bill
+                        </a>
+                        <?php else: ?>
+                            <span style="color: #999; font-style: italic; display: inline-block; margin-top: 10px;">
+                                No bill available
+                            </span>
+                        <?php endif; ?>
+                    </p>
+                    
+                </div>
+            <?php else: ?>
+                <!-- Show message when no maintenance records exist -->
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                    <p style="margin-bottom: 8px;">
+                        <strong style="color: #263a4f;">Last Maintenance Date:</strong> 
+                        <span style="color: #555;">N/A</span>
+                    </p>
+                    <p style="margin-bottom: 0;">
+                        <strong style="color: #263a4f;">Last Maintenance:</strong><br>
+                        <span style="font-style: italic; color: #666; display: block; margin-top: 5px; padding: 10px; background: white; border-left: 3px solid #ff7607; border-radius: 4px;">
+                            No maintenance records available
+                        </span>
+                    </p>
+                </div>
+            <?php endif; ?>
+
+            <?php 
+            $statusLower = strtolower(trim($status));
+            if ($statusLower === 'available' || $statusLower === 'assigned'): 
+            ?>
+            <!-- Form to schedule new maintenance -->
+            <div style="margin-top: 20px; padding: 20px; background: #fff3cd; border-radius: 8px; border: 1px solid #ffc107;">
+                <h6 style="margin-bottom: 15px; color: #856404;">
+                    <i class="fas fa-tools"></i> Schedule New Maintenance
+                </h6>
+                
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label for="maintenanceType" style="font-weight: 600; display: block; margin-bottom: 8px; color: #263a4f;">
+                        <i class="fas fa-edit"></i> Maintenance Type:
+                    </label>
+                    <textarea id="maintenanceType" class="form-control" rows="3" 
+                              placeholder="e.g., Calibration, Repair, Battery Replacement..." 
+                              style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px;"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="maintenanceDescription" style="font-weight: 600; display: block; margin-bottom: 8px; color: #263a4f;">
+                        <i class="fas fa-comment"></i> Description:
+                    </label>
+                    <textarea id="maintenanceDescription" class="form-control" rows="4" 
+                              placeholder="Describe the issue or maintenance needed..." 
+                              style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px;"></textarea>
+                </div>
             </div>
             <?php endif; ?>
         </div>
@@ -203,9 +295,12 @@ $hasAssignments = ($assignmentResult && mysqli_num_rows($assignmentResult) > 0);
             <i class="fas fa-times"></i> Close
         </button>
 
-        <?php if (in_array(strtolower($status), ['available', 'assigned'])): ?>
+        <?php 
+        $statusLower = strtolower(trim($status));
+        if ($statusLower === 'available' || $statusLower === 'assigned'): 
+        ?>
         <button type="button" class="btn btn-warning" 
-                style="background: #ff7607; padding: 10px 20px; border-radius: 5px; color: #fff;" 
+                style="background: #ff7607; padding: 10px 20px; border-radius: 5px; color: #fff; border: none;" 
                 onclick="scheduleMaintenanceCurrent(<?php echo $id; ?>)">
             <i class="fas fa-wrench"></i> Schedule Maintenance
         </button>
@@ -225,4 +320,5 @@ $hasAssignments = ($assignmentResult && mysqli_num_rows($assignmentResult) > 0);
 .status-available { background: #d4edda; color: #155724; }
 .status-assigned { background: #cce7ff; color: #004085; }
 .status-maintenance { background: #fff3cd; color: #856404; }
+.status-requested { background: #e1bee7; color: #4a148c; }
 </style>

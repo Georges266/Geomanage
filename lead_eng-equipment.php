@@ -100,43 +100,66 @@ $(document).on('click', '.report-issue-btn', function() {
     openModal('maintenanceRequestModal');
 });
 
+// SCHEDULE MAINTENANCE (FIXED)
+function scheduleMaintenanceCurrent() {
+    // Get the equipment ID from the hidden input in the form
+    const equipmentId = $('#maintenanceEquipmentId').val();
+    const maintenanceType = $('#maintenanceType').val().trim();
+    const maintenanceDescription = $('#maintenanceDescription').val().trim();
 
-// 🔹 Submit maintenance report via AJAX
-$(document).on('submit', '#maintenanceRequestForm', function(e) {
-    e.preventDefault(); // prevent default form submission
-    
-    // Serialize form data to send via AJAX
-    var formData = $(this).serialize();
-    
-    // Debug: Check what’s being sent
-    console.log("Form Data being sent:", formData);
-    console.log("Equipment ID:", $('#maintenanceEquipmentId').val());
+    console.log('Equipment ID:', equipmentId); // Debug
+
+    if (!equipmentId) {
+        alert('Equipment ID is missing. Please try again.');
+        return;
+    }
+
+    if (!maintenanceType) {
+        alert('Please enter the maintenance type.');
+        return;
+    }
+
+    if (!maintenanceDescription) {
+        alert('Please enter the maintenance description.');
+        return;
+    }
+
+    if (!confirm('Schedule maintenance for this equipment?')) {
+        return;
+    }
 
     $.ajax({
-        url: 'lead_eng-equipment-report_maintenance-query.php',
+        url: 'admin-equipment-schedule-maintenance.php',
         type: 'POST',
-        data: formData,
-        success: function(response) {
-            console.log("Response:", response);
-            closeModal('maintenanceRequestModal');
-
-            $('#successDetails').text(response);
-            openModal('successModal');
-
-            loadEquipment(); // reload equipment list
-            $('#maintenanceRequestForm')[0].reset();
-
-            setTimeout(function() {
-                closeModal('successModal');
-            }, 2000);
+        data: {
+            equipment_id: equipmentId,
+            maintenance_type: maintenanceType,
+            maintenance_description: maintenanceDescription
         },
-        error: function(xhr, status, error) {
+        success: function (response) {
+            console.log('Response:', response); // Debug
+            if (response.toLowerCase().includes("successfully")) {
+                alert('Success: ' + response);
+                closeModal('maintenanceRequestModal');
+
+                // Clear form
+                $('#maintenanceType').val('');
+                $('#maintenanceDescription').val('');
+
+                setTimeout(() => {
+                    loadEquipment();
+                }, 500);
+            } else {
+                alert("Error: " + response);
+            }
+        },
+        error: function (xhr, status, error) {
             console.error('AJAX Error:', error);
-            console.error('Response:', xhr.responseText);
-            alert('Error submitting maintenance request: ' + error);
+            alert('Error scheduling maintenance. Please try again.');
         }
     });
-});
+}
+
 /*
 // 🔹 Submit equipment request via AJAX
 $(document).on('submit', '#equipmentRequestForm', function(e) {
@@ -225,15 +248,39 @@ function initializeModalFunctions() {
                 </div>
 
                 <div class="form-group">
-                    <label>Problem Description</label>
-                    <textarea class="form-control" name="maintenance_note" rows="4" required></textarea>
+                <label for="maintenanceType" style="font-weight: 600; display: block; margin-bottom: 8px; color: #263a4f;">
+                    <i class="fas fa-edit"></i> New Maintenance Type:
+                </label>
+                <textarea id="maintenanceType" class="form-control" rows="4" 
+                          placeholder="Add maintenance type..." 
+                          style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px;"></textarea>
                 </div>
-
+                <div class="form-group">
+                <label for="maintenanceDescription" style="font-weight: 600; display: block; margin-bottom: 8px; color: #263a4f;">
+                    <i class="fas fa-edit"></i> Description:
+                </label>
+                <textarea id="maintenanceDescription" class="form-control" rows="4" 
+                          placeholder="Add maintenance description..." 
+                          style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px;"></textarea>
+                </div>
+  
                 <div class="form-group text-right" style="gap:10px; display:flex; justify-content:flex-end;">
-                    <button type="button" class="dl-btn" onclick="closeModal('maintenanceRequestModal')">Cancel</button>
-                    <button type="submit" name="report_issue" class="dl-btn" style="background:#f44336;">
-                        Submit Maintenance Request
-                    </button>
+                    <!-- Action Buttons -->
+                    <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; padding-top: 20px; border-top: 1px solid #ddd;">
+                        <button type="button" class="btn btn-secondary" 
+                                style="padding: 10px 20px; border-radius: 5px;" 
+                                onclick="closeModal('maintenanceRequestModal')">
+                            <i class="fas fa-times"></i> Close
+                        </button>
+
+                         
+                        <button type="button" class="btn btn-warning" 
+                                style="background: #ff7607; padding: 10px 20px; border-radius: 5px; color: #fff; border: none;" 
+                                onclick="scheduleMaintenanceCurrent()">
+                            <i class="fas fa-wrench"></i> Schedule Maintenance
+                        </button>
+                         
+                    </div>
                 </div>
             </form>
         </div>
