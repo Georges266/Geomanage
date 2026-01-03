@@ -64,9 +64,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $land_result = mysqli_query($con, $check_land);
 
       if (mysqli_num_rows($land_result) > 0) {
-        $land_row = mysqli_fetch_assoc($land_result);
-        $land_id = $land_row['land_id'];
-      } else {
+    $land_row = mysqli_fetch_assoc($land_result);
+    $land_id = $land_row['land_id'];
+    
+    // Check if ownership already exists
+    $check_ownership = "SELECT * FROM owns_client_land 
+                        WHERE client_id = '$client_id' AND land_id = '$land_id'";
+    $ownership_result = mysqli_query($con, $check_ownership);
+    
+    if (mysqli_num_rows($ownership_result) == 0) {
+        // Ownership doesn't exist, create it
+        $insert_ownership = "INSERT INTO owns_client_land (client_id, land_id) 
+                             VALUES ('$client_id', '$land_id')";
+        mysqli_query($con, $insert_ownership);
+    }
+} else {
         $insert_land = "INSERT INTO land 
     (land_address, land_area, land_type, coordinates_latitude, coordinates_longitude, 
      general_description, specific_location_notes, land_number,
@@ -83,6 +95,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (mysqli_query($con, $insert_land)) {
           $land_id = mysqli_insert_id($con);
+          $insert_ownership = "INSERT INTO owns_client_land (client_id, land_id) 
+                         VALUES ('$client_id', '$land_id')";
+                         if (!mysqli_query($con, $insert_ownership)) {
+        throw new Exception("Failed to link client with land ownership.");
+    }
         } else {
           throw new Exception("Failed to insert land information.");
         }
@@ -410,6 +427,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     .map-data-value {
       color: #0066cc;
       font-weight: 500;
+    }
+
+    /* Fix select dropdown visibility */
+    select.form-control {
+      color: #333;
+      font-size: 14px;
+      padding: 10px;
+      background-color: #fff;
+    }
+
+    select.form-control option {
+      color: #333;
+      font-size: 14px;
+      padding: 8px;
+      background-color: #fff;
+    }
+
+    select.form-control:focus {
+      color: #333;
+      background-color: #fff;
     }
   </style>
 </head>
@@ -816,15 +853,15 @@ window.addEventListener('message', function(event) {
             }
         }
         
-        // Fill hidden fields for database storage (including distance - but user won't see it)
+        // Fill hidden fields for database storage (elevation, slope, terrain, distance - all hidden from user)
         document.getElementById('elevation_avg').value = mapData.elevation_avg;
         document.getElementById('elevation_max').value = mapData.elevation_max;
         document.getElementById('elevation_min').value = mapData.elevation_min;
         document.getElementById('slope').value = mapData.slope;
         document.getElementById('terrain_factor').value = mapData.terrain_factor;
-        document.getElementById('distance_from_office').value = mapData.distance_from_office; // Hidden from user
+        document.getElementById('distance_from_office').value = mapData.distance_from_office;
         
-        // Display the captured data (without showing distance to user)
+        // Display the captured data (only coordinates and area)
         displayMapData();
         
         // Show success message
@@ -855,27 +892,11 @@ function displayMapData() {
             <span class="map-data-value">${parseFloat(mapData.latitude).toFixed(6)}, ${parseFloat(mapData.longitude).toFixed(6)}</span>
         </div>
         ${areaDisplay}
-        <div class="map-data-item">
-            <span class="map-data-label">⛰️ Elevation (Avg):</span>
-            <span class="map-data-value">${mapData.elevation_avg} m</span>
-        </div>
-        <div class="map-data-item">
-            <span class="map-data-label">⛰️ Elevation Range:</span>
-            <span class="map-data-value">${mapData.elevation_min}m - ${mapData.elevation_max}m</span>
-        </div>
-        <div class="map-data-item">
-            <span class="map-data-label">🏔️ Terrain:</span>
-            <span class="map-data-value">${mapData.terrain_factor}</span>
-        </div>
-        <div class="map-data-item">
-            <span class="map-data-label">📐 Slope:</span>
-            <span class="map-data-value">${mapData.slope}%</span>
-        </div>
         <button type="button" onclick="openMapTool()" class="btn btn-sm btn-secondary" style="margin-top: 10px;">
             <i class="fa fa-edit"></i> Edit Land Boundaries
         </button>
     `;
-    // Notice: NO distance display here - it's hidden from user but stored in hidden field
+    // Note: Elevation, slope, terrain, and distance are all captured and stored in hidden fields but not displayed to user
 }
 
     function showNotification(message, type) {

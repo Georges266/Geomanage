@@ -117,7 +117,13 @@
       const [drawnItems, setDrawnItems] = useState(null);
       const [measurements, setMeasurements] = useState(null);
       const [isLoading, setIsLoading] = useState(false);
+      const [useSatellite, setUseSatellite] = useState(false);
+      const [searchQuery, setSearchQuery] = useState('');
+      const [searchResults, setSearchResults] = useState([]);
+      const [isSearching, setIsSearching] = useState(false);
       const mapRef = useRef(null);
+      const satelliteLayerRef = useRef(null);
+      const streetLayerRef = useRef(null);
 
       // Office location - used as reference point for distance calculations
       const OFFICE_LOCATION = {
@@ -142,11 +148,21 @@
         // Create map centered on Lebanon
         const mapInstance = L.map(mapRef.current).setView([33.8547, 35.8623], 9);
 
-        // Add OpenStreetMap tile layer
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        // Add OpenStreetMap tile layer (default)
+        const streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           attribution: '© OpenStreetMap contributors',
           maxZoom: 19
         }).addTo(mapInstance);
+
+        // Add Esri World Imagery satellite layer (not added by default)
+        const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+          attribution: 'Tiles &copy; Esri',
+          maxZoom: 19
+        });
+
+        // Store layer references
+        streetLayerRef.current = streetLayer;
+        satelliteLayerRef.current = satelliteLayer;
 
         // Create custom red marker icon for office location
         const officeIcon = L.icon({
@@ -206,8 +222,123 @@
           analyzeLand(layer, mapInstance);
         });
 
+        // Handle when a shape is edited
+        mapInstance.on(L.Draw.Event.EDITED, (e) => {
+          const layers = e.layers;
+          layers.eachLayer((layer) => {
+            analyzeLand(layer, mapInstance);
+          });
+        });
+
+        // Handle when a shape is deleted
+        mapInstance.on(L.Draw.Event.DELETED, () => {
+          setMeasurements(null);
+        });
+
         setMap(mapInstance);
         setDrawnItems(drawnItemsLayer);
+      };
+
+      /**
+       * Toggle between satellite and street view
+       */
+      const toggleSatellite = () => {
+        if (!map || !satelliteLayerRef.current || !streetLayerRef.current) return;
+
+        if (useSatellite) {
+          // Switch to street view
+          map.removeLayer(satelliteLayerRef.current);
+          map.addLayer(streetLayerRef.current);
+        } else {
+          // Switch to satellite view
+          map.removeLayer(streetLayerRef.current);
+          map.addLayer(satelliteLayerRef.current);
+        }
+        setUseSatellite(!useSatellite);
+      };
+
+      /**
+       * Search for locations using Photon API (CORS-friendly alternative)
+       */
+      const handleSearch = async () => {
+        if (!searchQuery.trim() || !map) return;
+
+        setIsSearching(true);
+        setSearchResults([]);
+
+        try {
+          // Use Photon API which is CORS-friendly
+          const response = await fetch(
+            `https://photon.komoot.io/api/?q=${encodeURIComponent(searchQuery)}&limit=5&lang=en`,
+            {
+              headers: {
+                'Accept': 'application/json'
+              }
+            }
+          );
+
+          if (!response.ok) throw new Error('Search failed');
+          const data = await response.json();
+          
+          // Filter results for Lebanon or nearby
+          const filtered = data.features.filter(f => 
+            !f.properties.country || 
+            f.properties.country === 'Lebanon' || 
+            f.properties.country === 'لبنان' ||
+            (f.geometry.coordinates[1] > 33 && f.geometry.coordinates[1] < 35 &&
+             f.geometry.coordinates[0] > 35 && f.geometry.coordinates[0] < 37)
+          );
+
+          setSearchResults(filtered.length > 0 ? filtered : data.features.slice(0, 5));
+        } catch (error) {
+          console.error('Search error:', error);
+          alert('Search failed. Please try again.');
+        } finally {
+          setIsSearching(false);
+        }
+      };
+
+      /**
+ * Navigate to selected search result and place a marker
+ */
+const selectSearchResult = (result) => {
+  if (!map || !drawnItems) return;
+
+  const [lon, lat] = result.geometry.coordinates;
+  const L = window.L;
+  
+  // Clear any existing shapes
+  drawnItems.clearLayers();
+  
+  // Create and add marker at the search result location
+  const marker = L.marker([lat, lon]);
+  drawnItems.addLayer(marker);
+  
+  // Center map on the location
+  map.setView([lat, lon], 14);
+  
+  // Analyze the land at this location
+  analyzeLand(marker, map);
+  
+  // Clear search results
+  setSearchResults([]);
+  setSearchQuery('');
+};
+
+      /**
+       * Get display name for search result
+       */
+      const getDisplayName = (result) => {
+        const props = result.properties;
+        const parts = [];
+        
+        if (props.name) parts.push(props.name);
+        if (props.city) parts.push(props.city);
+        else if (props.county) parts.push(props.county);
+        if (props.state && props.state !== props.city) parts.push(props.state);
+        if (props.country) parts.push(props.country);
+        
+        return parts.join(', ') || 'Unknown location';
       };
 
       /**
@@ -502,12 +633,132 @@
         <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#f8f9fa' }}>
           {/* Header */}
           <div style={{ background: 'white', padding: '16px', borderBottom: '1px solid #dee2e6', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-            <h1 style={{ fontSize: '24px', fontWeight: 'bold', color: '#212529', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
-              📍 Land Mapping Tool
-            </h1>
-            <p style={{ fontSize: '14px', color: '#6c757d', margin: '4px 0 0 0' }}>
-              Draw a polygon or place a marker to mark the land boundaries
-            </p>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+              <div>
+                <h1 style={{ fontSize: '24px', fontWeight: 'bold', color: '#212529', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+                  📍 Land Mapping Tool
+                </h1>
+                <p style={{ fontSize: '14px', color: '#6c757d', margin: '4px 0 0 0' }}>
+                  Draw a polygon or place a marker to mark the land boundaries
+                </p>
+              </div>
+              
+              {/* Satellite toggle button */}
+              <button 
+                onClick={toggleSatellite}
+                style={{ 
+                  padding: '10px 16px', 
+                  background: useSatellite ? '#0066cc' : '#f8f9fa',
+                  color: useSatellite ? 'white' : '#212529',
+                  border: '1px solid #dee2e6', 
+                  borderRadius: '6px', 
+                  cursor: 'pointer',
+                  fontWeight: '600',
+                  fontSize: '14px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  transition: 'all 0.3s'
+                }}
+                onMouseOver={(e) => {
+                  if (!useSatellite) {
+                    e.target.style.background = '#e9ecef';
+                  }
+                }}
+                onMouseOut={(e) => {
+                  if (!useSatellite) {
+                    e.target.style.background = '#f8f9fa';
+                  }
+                }}
+              >
+                🛰️ {useSatellite ? 'Satellite View' : 'Street View'}
+              </button>
+            </div>
+
+            {/* Search bar */}
+            <div style={{ display: 'flex', gap: '8px', position: 'relative' }}>
+              <input 
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                placeholder="Search for villages, cities, or locations..."
+                style={{
+                  flex: 1,
+                  padding: '10px 14px',
+                  border: '1px solid #dee2e6',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  outline: 'none'
+                }}
+              />
+              <button 
+                onClick={handleSearch}
+                disabled={isSearching || !searchQuery.trim()}
+                style={{
+                  padding: '10px 20px',
+                  background: '#0066cc',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: isSearching || !searchQuery.trim() ? 'not-allowed' : 'pointer',
+                  fontWeight: '600',
+                  fontSize: '14px',
+                  opacity: isSearching || !searchQuery.trim() ? 0.6 : 1,
+                  transition: 'all 0.3s'
+                }}
+                onMouseOver={(e) => {
+                  if (!isSearching && searchQuery.trim()) {
+                    e.target.style.background = '#0052a3';
+                  }
+                }}
+                onMouseOut={(e) => {
+                  e.target.style.background = '#0066cc';
+                }}
+              >
+                {isSearching ? '🔍 Searching...' : '🔍 Search'}
+              </button>
+
+              {/* Search results dropdown */}
+              {searchResults.length > 0 && (
+                <div style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: 0,
+                  right: '120px',
+                  marginTop: '4px',
+                  background: 'white',
+                  border: '1px solid #dee2e6',
+                  borderRadius: '6px',
+                  boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+                  maxHeight: '300px',
+                  overflowY: 'auto',
+                  zIndex: 1000
+                }}>
+                  {searchResults.map((result, index) => (
+                    <div
+                      key={index}
+                      onClick={() => selectSearchResult(result)}
+                      style={{
+                        padding: '12px 14px',
+                        cursor: 'pointer',
+                        borderBottom: index < searchResults.length - 1 ? '1px solid #f1f1f1' : 'none',
+                        transition: 'background 0.2s'
+                      }}
+                      onMouseOver={(e) => e.currentTarget.style.background = '#f8f9fa'}
+                      onMouseOut={(e) => e.currentTarget.style.background = 'white'}
+                    >
+                      <div style={{ fontWeight: '600', fontSize: '14px', color: '#212529' }}>
+                        {result.properties.name || 'Unnamed'}
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#6c757d', marginTop: '2px' }}>
+                        {getDisplayName(result)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Main content area */}
@@ -571,45 +822,6 @@
                         </>
                       )}
                     </div>
-
-                    {/* Elevation card */}
-                    <div style={{ background: '#e8f5e9', padding: '12px', borderRadius: '8px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: '20px' }}>⛰️</span>
-                        <h3 style={{ fontWeight: '600', color: '#212529', margin: 0 }}>Elevation</h3>
-                        <span className="api-badge real">
-                          ✓ Real Data: {measurements.elevation.source}
-                        </span>
-                      </div>
-                      <div style={{ fontSize: '14px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                        <p style={{ margin: 0 }}>
-                          Average: <span style={{ fontWeight: '600' }}>{measurements.elevation.average}m</span>
-                        </p>
-                        {measurements.elevation.max && (
-                          <>
-                            <p style={{ margin: 0 }}>Max: <span style={{ fontWeight: '600' }}>{measurements.elevation.max}m</span></p>
-                            <p style={{ margin: 0 }}>Min: <span style={{ fontWeight: '600' }}>{measurements.elevation.min}m</span></p>
-                          </>
-                        )}
-                        <p style={{ margin: '4px 0 0 0', padding: '6px 8px', background: '#fff', borderRadius: '4px', fontWeight: '600', color: '#2e7d32' }}>
-                          Terrain: {measurements.elevation.terrainFactor}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Slope card (only for polygons) */}
-                    {!measurements.isMarker && (
-                      <div style={{ background: '#fff3e0', padding: '12px', borderRadius: '8px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', flexWrap: 'wrap' }}>
-                          <span style={{ fontSize: '20px' }}>📐</span>
-                          <h3 style={{ fontWeight: '600', color: '#212529', margin: 0 }}>Slope</h3>
-                          <span className="api-badge real">
-                            ✓ Calculated
-                          </span>
-                        </div>
-                        <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#e65100', margin: 0 }}>{measurements.elevation.slope}%</p>
-                      </div>
-                    )}
 
                     {/* Coordinates card */}
                     <div style={{ background: '#f8f9fa', padding: '12px', borderRadius: '8px' }}>

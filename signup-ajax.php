@@ -36,8 +36,8 @@ if (isset($_POST['submit'])) {
             $hashedPassword = md5(SALT.md5(SALT.$password));
             $created_at = date('Y-m-d H:i:s');
 
-            $insert = "INSERT INTO user (full_name, email, password, phone, salary, role, created_at) 
-                       VALUES ('$fullname', '$email', '$hashedPassword', '$phonenb', 0.00, 'Client', '$created_at')";
+            $insert = "INSERT INTO user (full_name, email, password, phone, role, created_at) 
+                       VALUES ('$fullname', '$email', '$hashedPassword', '$phonenb','Client', '$created_at')";
 
             if (mysqli_query($con, $insert)) {
                 $user_id = mysqli_insert_id($con);

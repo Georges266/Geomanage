@@ -33,6 +33,120 @@ $files_result = null;
 $deliverables_result = null;
 
 if ($has_active_project) {
+    // Handle land info update
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_land_info'])) {
+        $land_id = mysqli_real_escape_string($con, $_POST['land_id']);
+        $land_address = mysqli_real_escape_string($con, $_POST['land_address']);
+        $land_area = mysqli_real_escape_string($con, $_POST['land_area']);
+        $land_type = mysqli_real_escape_string($con, $_POST['land_type']);
+        $coordinates_latitude = mysqli_real_escape_string($con, $_POST['coordinates_latitude']);
+        $coordinates_longitude = mysqli_real_escape_string($con, $_POST['coordinates_longitude']);
+        $specific_location_notes = mysqli_real_escape_string($con, $_POST['specific_location_notes']);
+        $land_number = mysqli_real_escape_string($con, $_POST['land_number']);
+        $elevation_avg = mysqli_real_escape_string($con, $_POST['elevation_avg']);
+        $slope = mysqli_real_escape_string($con, $_POST['slope']);
+        $distance_from_office = mysqli_real_escape_string($con, $_POST['distance_from_office']);
+        $elevation_min = mysqli_real_escape_string($con, $_POST['elevation_min']);
+        $elevation_max = mysqli_real_escape_string($con, $_POST['elevation_max']);
+        $terrain_factor = mysqli_real_escape_string($con, $_POST['terrain_factor']);
+
+        // Get current land data to check what changed
+        $check_land = "SELECT * FROM land WHERE land_id = '$land_id'";
+        $check_result = mysqli_query($con, $check_land);
+        $current_land = mysqli_fetch_assoc($check_result);
+
+        // Determine approval flags
+        $geometry_approved = 0;
+        $terrain_approved = 0;
+
+        // Helper function to compare values (handles null, empty string, and numeric comparisons)
+        function valuesChanged($new_val, $old_val) {
+            // Normalize empty values to null for comparison
+            $new_normalized = ($new_val === '' || $new_val === null) ? null : $new_val;
+            $old_normalized = ($old_val === '' || $old_val === null) ? null : $old_val;
+            
+            // If both are null, they haven't changed
+            if ($new_normalized === null && $old_normalized === null) {
+                return false;
+            }
+            
+            // If one is null and the other isn't, they changed
+            if (($new_normalized === null) !== ($old_normalized === null)) {
+                return true;
+            }
+            
+            // For numeric comparisons, convert to float and compare
+            if (is_numeric($new_normalized) && is_numeric($old_normalized)) {
+                return (float)$new_normalized !== (float)$old_normalized;
+            }
+            
+            // For string comparisons, use strict comparison
+            return (string)$new_normalized !== (string)$old_normalized;
+        }
+
+        // Check if geometry data changed (area or coordinates)
+        if (valuesChanged($land_area, $current_land['land_area']) || 
+            valuesChanged($coordinates_latitude, $current_land['coordinates_latitude']) || 
+            valuesChanged($coordinates_longitude, $current_land['coordinates_longitude'])) {
+            $geometry_approved = 1;
+        }
+
+        // Check if terrain data changed (compare with existing values)
+        if (valuesChanged($land_address, $current_land['land_address']) || 
+            valuesChanged($land_type, $current_land['land_type']) || 
+            valuesChanged($specific_location_notes, $current_land['specific_location_notes']) || 
+            valuesChanged($land_number, $current_land['land_number']) || 
+            valuesChanged($elevation_avg, $current_land['elevation_avg']) || 
+            valuesChanged($slope, $current_land['slope']) || 
+            valuesChanged($distance_from_office, $current_land['distance_from_office']) || 
+            valuesChanged($elevation_min, $current_land['elevation_min']) || 
+            valuesChanged($elevation_max, $current_land['elevation_max']) || 
+            valuesChanged($terrain_factor, $current_land['terrain_factor'])) {
+            $terrain_approved = 1;
+        }
+
+        // Update land info
+        $update_land = "UPDATE land SET 
+                        land_address = '$land_address',
+                        land_area = '$land_area',
+                        land_type = '$land_type',
+                        coordinates_latitude = '$coordinates_latitude',
+                        coordinates_longitude = '$coordinates_longitude',
+                        specific_location_notes = '$specific_location_notes',
+                        land_number = '$land_number',
+                        elevation_avg = '$elevation_avg',
+                        slope = '$slope',
+                        distance_from_office = '$distance_from_office',
+                        elevation_min = '$elevation_min',
+                        elevation_max = '$elevation_max',
+                        terrain_factor = '$terrain_factor'";
+
+        // Add approval flags if they were set
+        if ($geometry_approved == 1) {
+            $update_land .= ", geometry_approved = 1";
+        }
+        if ($terrain_approved == 1) {
+            $update_land .= ", terrain_approved = 1";
+        }
+
+        $update_land .= " WHERE land_id = '$land_id'";
+
+        if (mysqli_query($con, $update_land)) {
+            $_SESSION['update_success'] = "Land information updated successfully!";
+            if ($geometry_approved == 1) {
+                $_SESSION['update_success'] .= " (Geometry Approved)";
+            }
+            if ($terrain_approved == 1) {
+                $_SESSION['update_success'] .= " (Terrain Approved)";
+            }
+        } else {
+            $_SESSION['update_error'] = "Error updating land information.";
+        }
+
+        header("Location: surveyor-deliverables.php");
+        exit();
+    }
+
     // Get project details
     $get_project = "SELECT * FROM project WHERE project_id = '$project_id' LIMIT 1";
     $project_result = mysqli_query($con, $get_project);
@@ -120,7 +234,7 @@ if ($has_active_project) {
                     }
                     
                     $_SESSION['upload_success'] = "Land file uploaded successfully!";
-                    header("Location: surveyor_dashboard.php");
+                    header("Location: surveyor-deliverables.php.php");
                     exit();
                 }
             }
@@ -160,7 +274,7 @@ if ($has_active_project) {
                     mysqli_query($con, $insert_deliverable);
                     
                     $_SESSION['upload_success'] = "Deliverable uploaded successfully!";
-                    header("Location: surveyor_dashboard.php");
+                    header("Location: surveyor-deliverables.php.php");
                     exit();
                 }
             }
@@ -210,6 +324,15 @@ if ($has_active_project) {
         case 'completed':
             $status_class = 'status-completed';
             break;
+    }
+}
+
+// Prepare lands data for JavaScript
+$lands_data = array();
+if ($has_active_project && $lands_result) {
+    mysqli_data_seek($lands_result, 0);
+    while($land = mysqli_fetch_assoc($lands_result)) {
+        $lands_data[] = $land;
     }
 }
 ?>
@@ -313,13 +436,30 @@ if ($has_active_project) {
                     <div class="land-info-section mb-4">
                         <h5>Assigned Lands</h5>
                         <div class="row">
-                            <?php while($land = mysqli_fetch_assoc($lands_result)) { ?>
+                            <?php while($land = mysqli_fetch_assoc($lands_result)) { 
+                                $geometry_approved = isset($land['geometry_approved']) ? $land['geometry_approved'] : 0;
+                                $terrain_approved = isset($land['terrain_approved']) ? $land['terrain_approved'] : 0;
+                            ?>
                                 <div class="col-md-6">
                                     <div class="land-info-card">
-                                        <h6>Land #<?= $land['land_id']; ?> - <?= htmlspecialchars($land['land_number'] ?? 'Lot ' . $land['land_id']); ?></h6>
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <h6 class="mb-0">Land #<?= $land['land_id']; ?> - <?= htmlspecialchars($land['land_number'] ?? 'Lot ' . $land['land_id']); ?></h6>
+                                            <div class="approval-badges">
+                                                <span class="approval-badge <?= $geometry_approved == 1 ? 'approved' : 'pending'; ?>" title="Geometry Approval">
+                                                    <i class="fas fa-map-marker-alt"></i> <?= $geometry_approved == 1 ? 'Geo ✓' : 'Geo ✗'; ?>
+                                                </span>
+                                                <span class="approval-badge <?= $terrain_approved == 1 ? 'approved' : 'pending'; ?>" title="Terrain Approval">
+                                                    <i class="fas fa-mountain"></i> <?= $terrain_approved == 1 ? 'Ter ✓' : 'Ter ✗'; ?>
+                                                </span>
+                                            </div>
+                                        </div>
                                         <p class="mb-1"><strong>Address:</strong> <?= htmlspecialchars($land['land_address']); ?></p>
                                         <p class="mb-1"><strong>Area:</strong> <?= number_format($land['land_area'], 1); ?> acres</p>
-                                        <p class="mb-0"><strong>Type:</strong> <?= htmlspecialchars($land['land_type']); ?></p>
+                                        <p class="mb-1"><strong>Type:</strong> <?= htmlspecialchars($land['land_type']); ?></p>
+                                        <p class="mb-2"><strong>Coordinates:</strong> <?= htmlspecialchars($land['coordinates_latitude'] ?? 'N/A'); ?>, <?= htmlspecialchars($land['coordinates_longitude'] ?? 'N/A'); ?></p>
+                                        <button class="edit-land-btn" onclick="openEditLandModal(<?= $land['land_id']; ?>)">
+                                            <i class="fas fa-edit mr-1"></i> Edit Land Info
+                                        </button>
                                     </div>
                                 </div>
                             <?php } ?>
@@ -584,6 +724,155 @@ if ($has_active_project) {
     </div>
 </section>
 
+<!-- Edit Land Info Modal -->
+<div id="editLandModal" class="land-modal" style="display: none;">
+    <div class="land-modal-content" style="max-width: 800px; margin: 5% auto; background: #fff; padding: 25px; border-radius: 8px; max-height: 85vh; overflow-y: auto;">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h4 id="modalTitle" style="margin: 0; color: #263a4f;">Edit Land Information</h4>
+            <button class="close-btn" onclick="closeModal('editLandModal')" style="font-size: 24px;">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <form id="editLandForm" method="POST" action="">
+            <input type="hidden" name="land_id" id="edit_land_id">
+            
+            <div class="approval-status-display mb-3">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="approval-info-box" style="background: #f0f8ff; padding: 12px; border-radius: 5px; border-left: 3px solid #2196F3;">
+                            <i class="fas fa-map-marker-alt"></i> <strong>Geometry Data</strong>
+                            <p style="font-size: 12px; margin: 5px 0 0 0; color: #666;">Updating Area or Coordinates will mark this as Geometry Approved</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="approval-info-box" style="background: #f0fff4; padding: 12px; border-radius: 5px; border-left: 3px solid #4caf50;">
+                            <i class="fas fa-mountain"></i> <strong>Terrain Data</strong>
+                            <p style="font-size: 12px; margin: 5px 0 0 0; color: #666;">Updating other fields will mark this as Terrain Approved</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label><i class="fas fa-tag"></i> Land Number</label>
+                        <input type="text" class="form-control" name="land_number" id="edit_land_number" placeholder="Enter land number">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label><i class="fas fa-map"></i> Land Type</label>
+                        <select class="form-control" name="land_type" id="edit_land_type">
+                            <option value="">Select type...</option>
+                            <option value="Residential">Residential</option>
+                            <option value="Commercial">Commercial</option>
+                            <option value="Industrial">Industrial</option>
+                            <option value="Agricultural">Agricultural</option>
+                            <option value="Mixed Use">Mixed Use</option>
+                            <option value="Vacant">Vacant</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label><i class="fas fa-map-marker-alt"></i> Address</label>
+                <input type="text" class="form-control" name="land_address" id="edit_land_address" placeholder="Enter land address">
+            </div>
+
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="geometry-section" style="background: #f0f8ff; padding: 15px; border-radius: 5px; margin-bottom: 15px;">
+                        <h6 style="color: #2196F3; margin-bottom: 12px;"><i class="fas fa-ruler-combined"></i> Geometry Data (Will trigger Geometry Approval)</h6>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label>Area (acres)</label>
+                                    <input type="number" step="0.01" class="form-control" name="land_area" id="edit_land_area" placeholder="0.00">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label>Latitude</label>
+                                    <input type="text" class="form-control" name="coordinates_latitude" id="edit_coordinates_latitude" placeholder="e.g., 33.7490">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label>Longitude</label>
+                                    <input type="text" class="form-control" name="coordinates_longitude" id="edit_coordinates_longitude" placeholder="e.g., 35.5628">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="terrain-section" style="background: #f0fff4; padding: 15px; border-radius: 5px; margin-bottom: 15px;">
+                <h6 style="color: #4caf50; margin-bottom: 12px;"><i class="fas fa-mountain"></i> Terrain Data (Will trigger Terrain Approval)</h6>
+                
+                <div class="form-group">
+                    <label>Specific Location Notes</label>
+                    <textarea class="form-control" name="specific_location_notes" id="edit_specific_location_notes" rows="2" placeholder="Add specific location details, landmarks, or access information..."></textarea>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label>Average Elevation (m)</label>
+                            <input type="number" step="0.1" class="form-control" name="elevation_avg" id="edit_elevation_avg" placeholder="0.0">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label>Min Elevation (m)</label>
+                            <input type="number" step="0.1" class="form-control" name="elevation_min" id="edit_elevation_min" placeholder="0.0">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label>Max Elevation (m)</label>
+                            <input type="number" step="0.1" class="form-control" name="elevation_max" id="edit_elevation_max" placeholder="0.0">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label>Slope (%)</label>
+                            <input type="number" step="0.1" class="form-control" name="slope" id="edit_slope" placeholder="0.0">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label>Distance from Office (km)</label>
+                            <input type="number" step="0.1" class="form-control" name="distance_from_office" id="edit_distance_from_office" placeholder="0.0">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label>Terrain Factor</label>
+                            <input type="number" step="0.1" class="form-control" name="terrain_factor" id="edit_terrain_factor" placeholder="0.0">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-actions" style="border-top: 1px solid #e0e0e0; padding-top: 15px; margin-top: 15px;">
+                <button type="submit" name="update_land_info" class="default-btn" style="width: 100%; padding: 12px;">
+                    <i class="fas fa-check mr-1"></i> Approve & Update Land Information
+                </button>
+                <p style="font-size: 11px; color: #666; margin: 10px 0 0 0; text-align: center;">
+                    By clicking this button, you confirm that the land information is accurate and complete
+                </p>
+            </div>
+        </form>
+    </div>
+</div>
+
 <!-- Success Message Modal -->
 <div id="successModal" class="land-modal" style="display: none;">
     <div class="land-modal-content" style="max-width: 350px; margin: 15% auto; background: #fff; padding: 20px; border-radius: 5px;">
@@ -639,6 +928,7 @@ if ($has_active_project) {
     padding: 12px;
     margin-bottom: 10px;
     border-left: 3px solid #4caf50;
+    position: relative;
 }
 .land-info-card h6 {
     margin-bottom: 8px;
@@ -648,6 +938,49 @@ if ($has_active_project) {
 .land-info-card p {
     font-size: 12px;
     margin-bottom: 3px;
+}
+.approval-badges {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+}
+.approval-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.approval-badge.approved {
+    background: #d4edda;
+    color: #155724;
+}
+.approval-badge.pending {
+    background: #fff3cd;
+    color: #856404;
+}
+.approval-badge i {
+    font-size: 9px;
+    margin-right: 2px;
+}
+.edit-land-btn {
+    background: #2196F3;
+    color: #fff;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    margin-top: 8px;
+    transition: all 0.3s ease;
+}
+.edit-land-btn:hover {
+    background: #1976D2;
+    transform: translateY(-1px);
+}
+.edit-land-btn i {
+    font-size: 11px;
 }
 .action-buttons {
     display: flex;
@@ -702,9 +1035,45 @@ if ($has_active_project) {
     display: flex;
     align-items: center;
 }
+.geometry-section, .terrain-section {
+    border: 1px solid rgba(0,0,0,0.1);
+}
+.approval-info-box {
+    height: 100%;
+}
+.approval-info-box i {
+    margin-right: 5px;
+}
+.form-group label {
+    font-weight: 600;
+    font-size: 13px;
+    color: #263a4f;
+    margin-bottom: 5px;
+}
+.form-group label i {
+    margin-right: 5px;
+    color: #666;
+}
+.form-control {
+    color: #263a4f !important;
+    background-color: #fff !important;
+}
+.form-control::placeholder {
+    color: #999 !important;
+}
+.form-control:focus {
+    border-color: #4caf50;
+    box-shadow: 0 0 0 0.2rem rgba(76, 175, 80, 0.25);
+}
+textarea.form-control {
+    color: #263a4f !important;
+}
 </style>
 
 <script>
+// Store lands data in JavaScript
+const landsData = <?= json_encode($lands_data); ?>;
+
 // Toggle collapsible sections
 function toggleSection(sectionId) {
     var section = document.getElementById(sectionId);
@@ -713,6 +1082,33 @@ function toggleSection(sectionId) {
     } else {
         section.style.display = "none";
     }
+}
+
+// Open edit land modal
+function openEditLandModal(landId) {
+    const land = landsData.find(l => l.land_id == landId);
+    if (!land) return;
+
+    // Fill form with current land data
+    document.getElementById('edit_land_id').value = land.land_id;
+    document.getElementById('edit_land_number').value = land.land_number || '';
+    document.getElementById('edit_land_type').value = land.land_type || '';
+    document.getElementById('edit_land_address').value = land.land_address || '';
+    document.getElementById('edit_land_area').value = land.land_area || '';
+    document.getElementById('edit_coordinates_latitude').value = land.coordinates_latitude || '';
+    document.getElementById('edit_coordinates_longitude').value = land.coordinates_longitude || '';
+    document.getElementById('edit_specific_location_notes').value = land.specific_location_notes || '';
+    document.getElementById('edit_elevation_avg').value = land.elevation_avg || '';
+    document.getElementById('edit_elevation_min').value = land.elevation_min || '';
+    document.getElementById('edit_elevation_max').value = land.elevation_max || '';
+    document.getElementById('edit_slope').value = land.slope || '';
+    document.getElementById('edit_distance_from_office').value = land.distance_from_office || '';
+    document.getElementById('edit_terrain_factor').value = land.terrain_factor || '';
+
+    // Update modal title
+    document.getElementById('modalTitle').textContent = 'Edit Land #' + land.land_id + ' - ' + (land.land_number || 'Lot ' + land.land_id);
+
+    openModal('editLandModal');
 }
 
 // Modal functions
@@ -764,6 +1160,20 @@ document.querySelectorAll('input[type="file"]').forEach(function(input) {
     document.getElementById('successDetails').textContent = '<?= addslashes($_SESSION['upload_success']); ?>';
     openModal('successModal');
     <?php unset($_SESSION['upload_success']); ?>
+<?php } ?>
+
+// Show update success message
+<?php if (isset($_SESSION['update_success'])) { ?>
+    document.getElementById('successMessage').textContent = 'Land Updated!';
+    document.getElementById('successDetails').textContent = '<?= addslashes($_SESSION['update_success']); ?>';
+    openModal('successModal');
+    <?php unset($_SESSION['update_success']); ?>
+<?php } ?>
+
+// Show update error message
+<?php if (isset($_SESSION['update_error'])) { ?>
+    alert('<?= addslashes($_SESSION['update_error']); ?>');
+    <?php unset($_SESSION['update_error']); ?>
 <?php } ?>
 </script>
 

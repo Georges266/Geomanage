@@ -205,3 +205,51 @@
     display: block;
 }
 
+/* ============================================
+   SELECT DROPDOWN FIX - Add to main.css
+   ============================================ */
+
+/* Fix select dropdown visibility */
+select.form-control {
+  color: #333;
+  font-size: 14px;
+  padding: 10px;
+  background-color: #fff;
+}
+
+select.form-control option {
+  color: #333;
+  font-size: 14px;
+  padding: 8px;
+  background-color: #fff;
+}
+
+select.form-control:focus {
+  color: #333;
+  background-color: #fff;
+  border-color: #ff7607;
+  outline: none;
+}
+
+/* Alternative: Style all select elements (not just .form-control) */
+select {
+  color: #333 !important;
+  font-size: 14px !important;
+  background-color: #fff !important;
+}
+
+select option {
+  color: #333 !important;
+  font-size: 14px !important;
+  padding: 8px !important;
+  background-color: #fff !important;
+}
+
+select:focus {
+  color: #333 !important;
+  background-color: #fff !important;
+}
+
+/* ============================================
+   END SELECT DROPDOWN FIX
+   ============================================ */
