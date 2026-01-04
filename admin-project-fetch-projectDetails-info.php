@@ -333,10 +333,7 @@ if (isset($_POST['project_id'])) {
                                 </div>
                                 <h5 class='empty-title'>No Documents Available</h5>
                                 <p class='empty-description'>There are currently no documents uploaded for this project. Documents such as plans, permits, and reports will appear here once uploaded.</p>
-                                <div class='empty-suggestion'>
-                                    <i class='fas fa-lightbulb'></i>
-                                    <span>Contact the project manager to upload necessary documents</span>
-                                </div>
+                                
                             </div>
                         <?php endif; ?>
                     </div>

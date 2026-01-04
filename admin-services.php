@@ -110,37 +110,170 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== "Admin") {
 
 <!-- Response Modal -->
 <div class="modal fade" id="respondModal" tabindex="-1">
-  <div class="modal-dialog modal-lg">
+  <div class="modal-dialog modal-xl">
     <div class="modal-content">
       
       <!-- Modal Header -->
       <div class="modal-header">
-        <h5 class="modal-title">Land Details & Response</h5>
+        <h5 class="modal-title">
+            <i class="fas fa-file-invoice-dollar"></i> Service Request Details & Pricing
+        </h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       
       <!-- Modal Body -->
       <div class="modal-body">
+        <div class="row">
+            <!-- Left Column: Land Details -->
+            <div class="col-lg-7">
+                <div id="landDetails" class="land-info-section">
+                    <p class="text-center text-muted">
+                        <i class="fas fa-spinner fa-spin"></i> Loading land information...
+                    </p>
+                </div>
+            </div>
 
-        <!-- Land Info (loaded via PHP/AJAX) -->
-        <div id="landDetails" class="mb-4">
-          <p>Loading land information...</p>
+            <!-- Right Column: Price Calculation -->
+            <div class="col-lg-5">
+                <div class="pricing-section">
+                    <div class="pricing-header">
+                        <h5><i class="fas fa-calculator"></i> Price Calculation</h5>
+                    </div>
+
+                    <!-- Loading State -->
+                    <div id="priceLoadingState" class="text-center py-4">
+                        <i class="fas fa-spinner fa-spin fa-2x text-primary mb-3"></i>
+                        <p class="text-muted">Calculating automated price...</p>
+                    </div>
+
+                    <!-- Price Breakdown (Hidden Initially) -->
+                    <div id="priceBreakdownSection" style="display: none;">
+                        <!-- Automated Price Display -->
+                        <div class="alert alert-info mb-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="fas fa-robot"></i> <strong>Automated Price</strong>
+                                </div>
+                                <div class="automated-price-value">
+                                    $<span id="automatedPriceDisplay">0.00</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Calculation Breakdown -->
+                        <div class="calculation-breakdown">
+                            <h6 class="breakdown-title">
+                                <i class="fas fa-list-ul"></i> Price Breakdown
+                                <button type="button" class="btn btn-sm btn-link" id="toggleBreakdown">
+                                    <i class="fas fa-chevron-down"></i>
+                                </button>
+                            </h6>
+                            <div id="breakdownDetails" style="display: none;">
+                                <table class="table table-sm breakdown-table">
+                                    <tbody>
+                                        <tr>
+                                            <td><i class="fas fa-tag text-primary"></i> Base Price</td>
+                                            <td class="text-end">$<span id="breakdown_base">0.00</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td><i class="fas fa-road text-warning"></i> Distance Cost</td>
+                                            <td class="text-end">$<span id="breakdown_distance">0.00</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td><i class="fas fa-mountain text-success"></i> Terrain Cost</td>
+                                            <td class="text-end">$<span id="breakdown_terrain">0.00</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td><i class="fas fa-expand text-info"></i> Area Cost</td>
+                                            <td class="text-end">$<span id="breakdown_area">0.00</span></td>
+                                        </tr>
+                                        <tr class="table-active fw-bold">
+                                            <td>Total</td>
+                                            <td class="text-end">$<span id="breakdown_total">0.00</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+
+                                <!-- Calculation Details -->
+                                <div class="calculation-details">
+                                    
+                                    <p class="detail-item mb-1">
+                                        <i class="fas fa-chart-line"></i> 
+                                        <strong>Terrain Factor:</strong> <span id="detail_terrain_factor">-</span>
+                                    </p>
+                                    <p class="detail-item mb-0">
+                                        <i class="fas fa-layer-group"></i> 
+                                        <strong>Area Factor:</strong> <span id="detail_area_factor">-</span>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Final Price Input -->
+                        <div class="final-price-section mt-4">
+                            <label for="requestPrice" class="form-label fw-bold">
+                                <i class="fas fa-dollar-sign"></i> Final Price (USD) *
+                            </label>
+                            <div class="input-group input-group-lg">
+                                <span class="input-group-text">$</span>
+                                <input type="number" 
+                                       class="form-control form-control-lg" 
+                                       id="requestPrice" 
+                                       placeholder="Enter final price" 
+                                       min="0" 
+                                       step="0.01" 
+                                       required>
+                                <button class="btn btn-outline-secondary" 
+                                        type="button" 
+                                        id="useAutomatedPrice"
+                                        title="Use automated price">
+                                    <i class="fas fa-magic"></i>
+                                </button>
+                            </div>
+                            <small class="form-text text-muted">
+                                <i class="fas fa-info-circle"></i> 
+                                You can adjust the automated price as needed
+                            </small>
+                        </div>
+
+                        <!-- Rejection Reason (Hidden by default) -->
+                        <div class="rejection-section mt-3" style="display: none;">
+                            <label for="rejectionReason" class="form-label fw-bold">
+                                <i class="fas fa-comment-slash"></i> Rejection Reason *
+                            </label>
+                            <textarea class="form-control" 
+                                      id="rejectionReason" 
+                                      rows="3" 
+                                      placeholder="Enter reason for rejection..."></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Error State -->
+                    <div id="priceErrorState" style="display: none;">
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <strong>Manual Quote Required</strong>
+                            <p class="mb-0 mt-2" id="priceErrorMessage"></p>
+                        </div>
+                        <div class="manual-price-section">
+                            <label for="requestPrice" class="form-label fw-bold">
+                                <i class="fas fa-dollar-sign"></i> Manual Price (USD) *
+                            </label>
+                            <div class="input-group input-group-lg">
+                                <span class="input-group-text">$</span>
+                                <input type="number" 
+                                       class="form-control form-control-lg" 
+                                       id="requestPriceManual" 
+                                       placeholder="Enter price manually" 
+                                       min="0" 
+                                       step="0.01" 
+                                       required>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-
-        <!-- Admin Form -->
-        <div class="response-form-section">
-
-          <div class="mb-3">
-            <label for="requestPrice" class="form-label">Price (USD)</label>
-            <input type="number" class="form-control" id="requestPrice" placeholder="Enter price" min="0" step="0.01" required>
-          </div>
-
-          <div class="mb-3">
-            <label for="rejectionReason" class="form-label">Rejection reason</label>
-            <input type="text" class="form-control" id="rejectionReason" min="0" step="0.01">
-          </div>
-        </div>
-
       </div>
 
       <!-- Modal Footer -->
@@ -467,8 +600,14 @@ footer {
 </style>
 
 
+// Complete JavaScript section for admin-services.php
+
 <script>
-// 🔹 Load requests via AJAX (with filters)
+// Global variables
+let automatedPrice = 0;
+let currentRequestId = null;
+
+// Load requests via AJAX
 function loadRequests(status = 'pending') {
     $.ajax({
         url: 'admin-services-show-ajax.php',
@@ -484,167 +623,230 @@ function loadRequests(status = 'pending') {
         },
         error: function(xhr, status, error) {
             console.error('Error loading requests:', error);
-            $('#userTable').html(
-                '<div class="col-12"><p class="text-center text-danger p-3">Error loading requests.</p></div>'
-            );
+            $('#userTable').html('<div class="col-12"><p class="text-center text-danger p-3">Error loading requests.</p></div>');
         }
     });
 }
 
-// 🔹 Tab Navigation (Pending / Approved / Rejected)
+// Tab Navigation
 $(document).on('click', '.tab-btn', function() {
     $('.tab-btn').removeClass('active');
     $(this).addClass('active');
-    const status = $(this).data('status');
-    loadRequests(status);
+    loadRequests($(this).data('status'));
 });
 
-// 🔹 Apply Filters
+// Apply Filters
 $(document).on('click', '#applyFilters', function() {
-    const activeTab = $('.tab-btn.active').data('status');
-    loadRequests(activeTab);
+    loadRequests($('.tab-btn.active').data('status'));
 });
 
-// 🔹 Load pending requests on page load
 $(document).ready(function() {
     loadRequests('pending');
 });
 
 $('#serviceTypeFilter, #dateRangeFilter').on('change', function() {
-    const activeTab = $('.tab-btn.active').data('status'); // ✅ Get current tab
-     loadRequests(activeTab);
+    loadRequests($('.tab-btn.active').data('status'));
 });
 
-// for land info in the form 
-let currentRequestId = null;
-
+// Open respond modal with automated price calculation
 $(document).on('click', '.respond-btn', function() {
-    currentRequestId = $(this).data('id');   
+    currentRequestId = $(this).data('id');
     $('#respondModal').modal('show');
 
-        // Clear previous input
-    $('#requestPrice').val('');
-    $('#rejectionReason').val('');
+    // Reset all states
+    $('#requestPrice, #requestPriceManual, #rejectionReason').val('');
+    $('#priceLoadingState').show();
+    $('#priceBreakdownSection, #priceErrorState').hide();
+    $('.rejection-section').hide();
+    automatedPrice = 0;
 
-    $('#landDetails').html('<p>Loading...</p>');  
-
+    // Load land details
+    $('#landDetails').html('<p class="text-center text-muted"><i class="fas fa-spinner fa-spin"></i> Loading...</p>');
     $.post('admin-services-fetch-land-info.php', { request_id: currentRequestId }, function(response) {
-        $('#landDetails').html(response);  
+        $('#landDetails').html(response);
+    });
+
+    // Calculate automated price
+    $.post('admin-services-calculate-price.php', { request_id: currentRequestId }, function(response) {
+        try {
+            const data = JSON.parse(response);
+            
+            if (data.error) {
+                $('#priceLoadingState').hide();
+                $('#priceErrorState').show();
+                $('#priceErrorMessage').text(data.message);
+            } else {
+                automatedPrice = parseFloat(data.automated_price);
+                
+                $('#priceLoadingState').hide();
+                $('#priceBreakdownSection').show();
+                
+                // Display automated price
+                $('#automatedPriceDisplay').text(data.automated_price);
+                
+                // Set breakdown
+                $('#breakdown_base').text(data.breakdown.base_price);
+                $('#breakdown_distance').text(data.breakdown.distance_cost);
+                $('#breakdown_terrain').text(data.breakdown.terrain_cost);
+                $('#breakdown_area').text(data.breakdown.area_cost);
+                $('#breakdown_total').text(data.breakdown.total);
+                
+                // Set details
+                $('#detail_area').text(data.details.area);
+                $('#detail_distance').text(data.details.distance);
+                $('#detail_terrain_factor').text(data.details.terrain_factor);
+                $('#detail_area_factor').text(data.details.area_factor);
+                
+                // Pre-fill price input
+                $('#requestPrice').val(data.automated_price);
+            }
+        } catch (e) {
+            console.error('Parse error:', e);
+            $('#priceLoadingState').hide();
+            $('#priceErrorState').show();
+            $('#priceErrorMessage').text('Error calculating price. Please enter manually.');
+        }
     }).fail(function() {
-        $('#landDetails').html('<p class="text-danger">Failed to load land info.</p>');
+        $('#priceLoadingState').hide();
+        $('#priceErrorState').show();
+        $('#priceErrorMessage').text('Failed to calculate price. Please enter manually.');
     });
 });
 
+// Toggle breakdown details
+$(document).on('click', '#toggleBreakdown', function() {
+    $('#breakdownDetails').slideToggle(300);
+    $(this).find('i').toggleClass('fa-chevron-down fa-chevron-up');
+});
+
+// Use automated price button
+$(document).on('click', '#useAutomatedPrice', function() {
+    if (automatedPrice > 0) {
+        $('#requestPrice').val(automatedPrice.toFixed(2));
+        $(this).html('<i class="fas fa-check"></i>');
+        setTimeout(() => $(this).html('<i class="fas fa-magic"></i>'), 1000);
+    }
+});
+
+// Approve Request
 $('#approveRequest').click(function() {
-    let price = $('#requestPrice').val();
-    if (!price) {
-        alert("Please enter a price to approve this request.");
-        $('#requestPrice') 
-        return; // stop execution
+    let price = $('#requestPrice').val() || $('#requestPriceManual').val();
+    
+    if (!price || parseFloat(price) <= 0) {
+        alert("Please enter a valid price to approve this request.");
+        $('#requestPrice, #requestPriceManual').addClass('is-invalid');
+        return;
     }
 
     $.post('admin-services-status-update-query.php', {
         request_id: currentRequestId,
         status: 'approved',
-        price: price,
-         
+        price: price
     }, function(response) {
-        alert(response);
-        $('#respondModal').modal('hide');
-        loadRequests();  
+        if (response.includes('success') || !response.includes('error')) {
+            alert('Request approved successfully!');
+            $('#respondModal').modal('hide');
+            loadRequests('pending');
+        } else {
+            alert(response);
+        }
     });
 });
 
+// Deny Request
+let rejectionMode = false;
 $('#denyRequest').click(function() {
-    let notes = $('#rejectionReason').val();
-     if (!notes) {
-        alert("Please enter a rejection reason.");
-        $('#rejectionReason')
-        return; // stop execution
+    if (!rejectionMode) {
+        // First click: show rejection section
+        $('.rejection-section').slideDown();
+        $('#rejectionReason').focus();
+        $(this).html('<i class="fas fa-exclamation-triangle"></i> Confirm Rejection');
+        $(this).removeClass('btn-danger').addClass('btn-warning');
+        rejectionMode = true;
+    } else {
+        // Second click: submit rejection
+        let notes = $('#rejectionReason').val().trim();
+        
+        if (!notes) {
+            alert("Please enter a rejection reason.");
+            $('#rejectionReason').addClass('is-invalid');
+            return;
+        }
+
+        $.post('admin-services-status-update-query.php', {
+            request_id: currentRequestId,
+            status: 'rejected',
+            notes: notes
+        }, function(response) {
+            if (response.includes('success') || !response.includes('error')) {
+                alert('Request rejected.');
+                $('#respondModal').modal('hide');
+                loadRequests('pending');
+                rejectionMode = false;
+            } else {
+                alert(response);
+            }
+        });
     }
-    $.post('admin-services-status-update-query.php', {
-        request_id: currentRequestId,
-        status: 'rejected',
-        notes: notes
-    }, function(response) {
-        alert(response);
-        $('#respondModal').modal('hide');
-        loadRequests();  
-    });
 });
 
+// Reset rejection mode when modal closes
+$('#respondModal').on('hidden.bs.modal', function() {
+    rejectionMode = false;
+    $('#denyRequest').html('<i class="fas fa-times"></i> Deny Request')
+                     .removeClass('btn-warning').addClass('btn-danger');
+});
 
-
-// open rejected modal
+// View rejection reason
 $(document).on('click', '.viewReasonBtn', function() {
     let id = $(this).data('id');
-
-    // Move modal to body if not already there
     if ($('#rejectionReasonModal').parent()[0].tagName !== 'BODY') {
         $('#rejectionReasonModal').appendTo('body');
     }
-
     $('#rejectionReasonModal').modal('show');
-
-    $.post('admin-services-fetch-rejection-reason.php', { 
-        id: id 
-    }, function(response) {
-        $('#rejectionReasonText').html(response);  
-    }).fail(function() {
-        $('#rejectionReasonText').html('<p class="text-danger">Failed to load reason.</p>');
+    $.post('admin-services-fetch-rejection-reason.php', { id: id }, function(response) {
+        $('#rejectionReasonText').html(response);
     });
 });
 
-
-
-// for land info in the form approved 
-
+// View approved details
 $(document).on('click', '.viewDetailsBtn', function() {
-    let id = $(this).data('id');   
+    let id = $(this).data('id');
     $('#approvedModal').modal('show');
-
-       
-    $('#approvedLandDetails').html('<p>Loading...</p>');  
-
+    $('#approvedLandDetails').html('<p>Loading...</p>');
     $.post('admin-services-fetch-land-info.php', { request_id: id }, function(response) {
-        $('#approvedLandDetails').html(response);  
-    }).fail(function() {
-        $('#approvedLandDetails').html('<p class="text-danger">Failed to load land info.</p>');
+        $('#approvedLandDetails').html(response);
     });
 });
 
+// View on Map
+$(document).on('click', '#viewMapBtn', function() {
+    if (!currentRequestId) {
+        alert('Request ID not available.');
+        return;
+    }
+    window.open(`admin-map-viewer.php?request_id=${currentRequestId}`, 'MapView', 'width=1200,height=800,scrollbars=yes,resizable=yes');
+});
 
-// Open Edit Modal
+// Service Management
 $(document).on('click', '.editServiceBtn', function() {
     let serviceId = $(this).data('id');
-    
-    // Move modal to body if not already there
     if ($('#editServiceModal').parent()[0].tagName !== 'BODY') {
         $('#editServiceModal').appendTo('body');
-    }//If the modal is trapped inside another element, move it directly under the <body> tag"
-    
+    }
     $('#editServiceModal').fadeIn(300);
-    $('body').css('overflow', 'hidden'); //"Lock the page so the user can't scroll while the modal is open"
-                                         //Why? Forces focus on the modal
-    $('#editServiceModalBody').html('<p class="text-center">Loading...</p>'); //Put a 'Loading...' message inside the modal while we fetch data
-    
-    $.post('admin-services-fetch-service-info.php', 
-    { service_id: serviceId }, function(data) {
-        $('#editServiceModalBody').html(data);//"When data comes back, replace 'Loading...' with the actual form"
-    }).fail(function() {
-        $('#editServiceModalBody').html('<p class="text-danger">Error loading service info.</p>');
+    $('body').css('overflow', 'hidden');
+    $('#editServiceModalBody').html('<p class="text-center">Loading...</p>');
+    $.post('admin-services-fetch-service-info.php', { service_id: serviceId }, function(data) {
+        $('#editServiceModalBody').html(data);
     });
 });
 
-// Close Edit Modal
 $(document).on('click', '#closeEditModal, #closeEditModalBtn', function() {
     $('#editServiceModal').fadeOut(300);
-    $('body').css('overflow', ''); //Unlock the page so the user can scroll again
+    $('body').css('overflow', '');
 });
 
- 
-
-// Save Service Changes
 $(document).on('click', '#saveServiceBtn', function() {
     $.post('admin-services-edit-query.php', {
         service_id: $('#edit_service_id').val(),
@@ -658,104 +860,45 @@ $(document).on('click', '#saveServiceBtn', function() {
         $('#editServiceModal').fadeOut(300);
         $('body').css('overflow', '');
         loadRequests('services');
-    }).fail(function(xhr, status, error) {
-        alert('Error saving service: ' + error);
     });
 });
 
-// Delete Service
 $(document).on('click', '.deleteServiceBtn', function() {
     const serviceId = $(this).data('id');
     if(!confirm("Are you sure you want to deactivate this service?")) return;
-
     $.post('admin-services-delete-query.php', { service_id: serviceId }, function(response) {
-        alert(response);  
-        loadRequests('services');  
+        alert(response);
+        loadRequests('services');
     });
 });
 
-
-// Open Add Service Modal
 $(document).on('click', '#addServiceBtn', function() {
     if ($('#addServiceModal').parent()[0].tagName !== 'BODY') {
         $('#addServiceModal').appendTo('body');
     }
-    
     $('#addServiceModal').fadeIn(300);
     $('body').css('overflow', 'hidden');
-    
-    // Clear all fields
-    $('#add_service_name').val('');
-    $('#add_min_price').val('');
-    $('#add_max_price').val('');
-    $('#add_description').val('');
+    $('#add_service_name, #add_min_price, #add_max_price, #add_description').val('');
 });
 
-// Close Add Service Modal
 $(document).on('click', '#closeAddModal, #closeAddModalBtn', function() {
     $('#addServiceModal').fadeOut(300);
     $('body').css('overflow', '');
 });
 
-
-
-// Save New Service
 $(document).on('click', '#saveNewServiceBtn', function() {
-    let serviceName = $('#add_service_name').val().trim();
-    let minPrice = $('#add_min_price').val();
-    let maxPrice = $('#add_max_price').val();
-    let description = $('#add_description').val().trim();
-    
-    
     $.post('admin-services-add-service-query.php', {
-        service_name: serviceName,
-        min_price: minPrice,
-        max_price: maxPrice,
-        description: description
+        service_name: $('#add_service_name').val().trim(),
+        min_price: $('#add_min_price').val(),
+        max_price: $('#add_max_price').val(),
+        description: $('#add_description').val().trim()
     }, function(response) {
         alert(response);
         $('#addServiceModal').fadeOut(300);
         $('body').css('overflow', '');
-        loadRequests('services'); // Refresh the services list
-    }).fail(function(xhr, status, error) {
-        alert('Error adding service: ' + error);
+        loadRequests('services');
     });
 });
-
-// Store current request ID
- 
-
-$(document).on('click', '.respond-btn', function() {
-    currentRequestId = $(this).data('id');   
-    $('#respondModal').modal('show');
-
-    // Clear previous input
-    $('#requestPrice').val('');
-    $('#rejectionReason').val('');
-
-    $('#landDetails').html('<p>Loading...</p>');  
-
-    $.post('admin-services-fetch-land-info.php', { request_id: currentRequestId }, function(response) {
-        $('#landDetails').html(response);
-    }).fail(function() {
-        $('#landDetails').html('<p class="text-danger">Failed to load land info.</p>');
-    });
-});
-
-// View on Map button handler
-$(document).on('click', '#viewMapBtn', function() {
-    if (!currentRequestId) {
-        alert('Request ID not available.');
-        return;
-    }
-    
-    // Open admin map viewer with request_id - it will fetch coordinates from database
-    const mapUrl = `admin-map-viewer.php?request_id=${currentRequestId}`;
-    window.open(mapUrl, 'MapView', 'width=1200,height=800,scrollbars=yes,resizable=yes');
-});
-
-
 </script>
-
-
+ 
 <?php include 'includes/footer.html'; ?>
