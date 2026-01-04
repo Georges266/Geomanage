@@ -11,6 +11,24 @@ include 'includes/connect.php';
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
 <?php
+// Add this at the very beginning of admin-project.php, right after include statements
+
+
+// Check for success/error messages from session FIRST
+$successMessage = false;
+$errorMessage = false;
+
+if (isset($_SESSION['success_message'])) {
+    $successMessage = $_SESSION['success_message'];
+    unset($_SESSION['success_message']); // Clear it immediately after reading
+}
+
+if (isset($_SESSION['error_message'])) {
+    $errorMessage = $_SESSION['error_message'];
+    unset($_SESSION['error_message']); // Clear it immediately after reading
+}
+
+// NOW handle the POST request (for form submission)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $projectName       = mysqli_real_escape_string($con, $_POST['Project_Name']);
     $startDate         = $_POST['Start_Date'];
@@ -18,10 +36,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $leadEngineerId    = $_POST['Lead_Engineer'];
     $projectDesc       = mysqli_real_escape_string($con, $_POST['Project_Description']);
     $Team_Size         = $_POST['Team_Size'];
+    
     // Insert project
     $sqlProject = "INSERT INTO project 
-        (project_name, start_date, end_date, lead_engineer_id, team_size, description,status)
-        VALUES ('$projectName', '$startDate', '$endDate', '$leadEngineerId','$Team_Size', '$projectDesc','active')";
+        (project_name, start_date, end_date, lead_engineer_id, team_size, description, status)
+        VALUES ('$projectName', '$startDate', '$endDate', '$leadEngineerId', '$Team_Size', '$projectDesc', 'active')";
 
     if (mysqli_query($con, $sqlProject)) {
         $projectId = mysqli_insert_id($con); // ID of the last project inserted
@@ -33,9 +52,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit();
         }
 
-        // Update service requests with project ID
+        // Arrays to track lands for this project (avoid duplicates)
+        $processedLands = array();
+
+        // Update service requests with project ID AND get their land IDs
         foreach ($_POST['approved_requests'] as $request_id) {
             $request_id = (int)$request_id; // Cast to int for safety
+            
+            // Get the land_id for this service request
+            $landQuery = "SELECT land_id FROM service_request WHERE request_id = $request_id";
+            $landResult = mysqli_query($con, $landQuery);
+            
+            if ($landResult && $landRow = mysqli_fetch_assoc($landResult)) {
+                $land_id = (int)$landRow['land_id'];
+                
+                // Add to includes_project_land table (only if not already added)
+                if (!in_array($land_id, $processedLands)) {
+                    $insertLandProject = "INSERT INTO includes_project_land (project_id, land_id) 
+                                         VALUES ($projectId, $land_id)";
+                    mysqli_query($con, $insertLandProject);
+                    
+                    // Mark this land as processed
+                    $processedLands[] = $land_id;
+                }
+            }
+            
+            // Update service request with project ID
             $updateQuery = "UPDATE service_request 
                     SET project_id = $projectId 
                     WHERE request_id = $request_id";
@@ -65,20 +107,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header("Location: admin-project.php");
         exit();
     }
-}
-
-// Check for success/error messages from session
-$successMessage = false;
-$errorMessage = false;
-
-if (isset($_SESSION['success_message'])) {
-    $successMessage = $_SESSION['success_message'];
-    unset($_SESSION['success_message']); // Clear it after reading
-}
-
-if (isset($_SESSION['error_message'])) {
-    $errorMessage = $_SESSION['error_message'];
-    unset($_SESSION['error_message']); // Clear it after reading
 }
 ?>
 
@@ -129,8 +157,8 @@ $total_projects_completed = $row['total_projects_active'];
         <div class="row">
             <div class="col-12">
                 <div class="tab-navigation mb-40">
-                    <button class="tab-btn active" data-status="active">Active Projects(<?php echo $total_projects_active ?>)</button>
-                    <button class="tab-btn" data-status="completed">Completed Projects(<?php echo $total_projects_completed ?>)</button>
+                    <button class="tab-btn active" data-status="active">Active Projects</button>
+                    <button class="tab-btn" data-status="completed">Completed Projects</button>
                 </div>
             </div>
         </div>
@@ -476,6 +504,19 @@ $(document).on('click', '.showPDFBtn', function() {
     });
 });
 
+// View on Map button handler
+$(document).on('click', '.viewMapBtn', function() {
+    const requestId = $(this).data('request-id');
+    
+    if (!requestId) {
+        alert('Request ID not available.');
+        return;
+    }
+    
+    // Open admin map viewer with request_id
+    const mapUrl = `admin-map-viewer.php?request_id=${requestId}`;
+    window.open(mapUrl, 'MapView', 'width=1200,height=800,scrollbars=yes,resizable=yes');
+});
 
 
 </script>
@@ -565,15 +606,25 @@ $(document).on('click', '.showPDFBtn', function() {
 
                 <div class="approved-requests-list">
                     <?php 
-                    $sql = "SELECT sr.request_id, sr.status, sr.approval_status, sr.approval_status, u.full_name, s.service_name, p.project_id 
-                    FROM service_request sr 
-                    JOIN service s ON sr.service_id = s.service_id 
-                    JOIN client c ON c.client_id = sr.client_id 
-                    JOIN user u ON u.user_id = c.user_id 
-                    LEFT JOIN project p ON p.project_id = sr.project_id 
-                    WHERE sr.status = 'approved' 
-                    AND sr.project_id IS null 
-                    ORDER BY sr.approval_status DESC;";
+                    $sql = "SELECT 
+                                sr.request_id,
+                                sr.status,
+                                sr.approval_status,
+                                u.user_id,
+                                u.full_name,
+                                s.service_name,
+                                p.project_id,
+                                land.land_address
+                            FROM service_request sr
+                            JOIN service s ON sr.service_id = s.service_id
+                            JOIN land ON land.land_id = sr.land_id
+                            JOIN client c ON c.client_id = sr.client_id
+                            JOIN user u ON u.user_id = c.user_id
+                            LEFT JOIN project p ON p.project_id = sr.project_id
+                            WHERE sr.status = 'approved'
+                            AND sr.project_id IS NULL
+                            ORDER BY land.land_id, sr.approval_status DESC;
+                            ";
                     
                     $result = mysqli_query($con, $sql);
 
@@ -592,6 +643,7 @@ $(document).on('click', '.showPDFBtn', function() {
                         </div>
                         <div class="request-details">
                             <p class="request-service"><strong>Service:</strong> <?php echo $row['service_name']; ?></p>
+                            <p class="request-service"><strong>Land:</strong> <?php echo $row['land_address']; ?></p>
                             <p class="request-date">
                                 Approved on: <?php echo $row['approval_status'] ? date('M d, Y', strtotime($row['approval_status'])) : 'N/A'; ?>
                             </p>
@@ -946,9 +998,67 @@ select[name="Lead_Engineer"] option[value=""] {
         width: 100%;
     }
 }
+
+/* ========================================
+   UNIFIED TAB NAVIGATION STYLES
+   Replace the tab styles in admin-project.php with these
+======================================== */
+
+/* Tab Navigation Container */
+.tab-navigation {
+    display: flex;
+    gap: 10px;
+    border-bottom: 2px solid #e0e0e0;
+    padding-bottom: 0;
+    margin-bottom: 30px;
+}
+
+/* Tab Buttons */
+.tab-btn {
+    background: none;
+    border: none;
+    padding: 12px 24px;
+    font-size: 15px;
+    font-weight: 600;
+    color: #666;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.3s ease;
+    border-bottom: 3px solid transparent;
+}
+
+.tab-btn:hover {
+    color: #ff7607;
+    background: #f9f9f9;
+}
+
+.tab-btn.active {
+    color: #ff7607;
+    border-bottom-color: #ff7607;
+    background: #fff5ed;
+}
+
+/* Animated underline effect */
+.tab-btn::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background: #ff7607;
+    transform: scaleX(0);
+    transition: transform 0.3s ease;
+}
+
+.tab-btn.active::after {
+    transform: scaleX(1);
+}
+
 </style>
 <?php 
-if ($successMessage  !== false) {
+// Only show modals if messages actually exist and have content
+if ($successMessage !== false && !empty(trim($successMessage))) {
     echo '<script>
         setTimeout(function() {
             openModal("successModal");
@@ -956,7 +1066,7 @@ if ($successMessage  !== false) {
     </script>';
 }
 
-if ($errorMessage   !== false) {
+if ($errorMessage !== false && !empty(trim($errorMessage))) {
     echo '<script>
         setTimeout(function() {
             alert("' . addslashes($errorMessage) . '");

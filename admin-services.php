@@ -607,7 +607,6 @@ $(document).on('click', '.viewDetailsBtn', function() {
 });
 
 
-
 // Open Edit Modal
 $(document).on('click', '.editServiceBtn', function() {
     let serviceId = $(this).data('id');
