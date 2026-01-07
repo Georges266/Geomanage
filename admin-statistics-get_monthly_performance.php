@@ -4,6 +4,10 @@ header('Content-Type: application/json');
 
 $year = isset($_GET['year']) ? intval($_GET['year']) : date('Y');
 
+// ============================================
+// GET REVENUE FROM ALL SOURCES
+// ============================================
+
 // Get monthly revenue from service requests
 $revenueQuery = "
     SELECT 
@@ -41,23 +45,73 @@ while($row = mysqli_fetch_assoc($landRevenueResult)) {
     }
 }
 
-// Get monthly expenses
-$expensesQuery = "
+// ============================================
+// GET EXPENSES FROM ALL SOURCES
+// ============================================
+
+$expensesData = [];
+
+// 1. Get Maintenance expenses
+$maintenanceQuery = "
     SELECT 
-        DATE_FORMAT(expense_date, '%Y-%m') as month,
-        SUM(amount) as total_expenses
-    FROM expense
-    WHERE YEAR(expense_date) = $year
-    GROUP BY DATE_FORMAT(expense_date, '%Y-%m')
+        DATE_FORMAT(maintenance_date, '%Y-%m') as month,
+        SUM(total_cost) as amount
+    FROM maintenance
+    WHERE YEAR(maintenance_date) = $year
+    GROUP BY DATE_FORMAT(maintenance_date, '%Y-%m')
 ";
 
-$expensesResult = mysqli_query($con, $expensesQuery);
-$expensesData = [];
-while($row = mysqli_fetch_assoc($expensesResult)) {
-    $expensesData[$row['month']] = floatval($row['total_expenses']);
+$maintenanceResult = mysqli_query($con, $maintenanceQuery);
+while($row = mysqli_fetch_assoc($maintenanceResult)) {
+    $month = $row['month'];
+    if(!isset($expensesData[$month])) {
+        $expensesData[$month] = 0;
+    }
+    $expensesData[$month] += floatval($row['amount']);
 }
 
-// Combine data for all 12 months
+// 2. Get Salary expenses
+$salaryQuery = "
+    SELECT 
+        DATE_FORMAT(date_paid, '%Y-%m') as month,
+        SUM(amount) as amount
+    FROM salary_payment
+    WHERE YEAR(date_paid) = $year
+    GROUP BY DATE_FORMAT(date_paid, '%Y-%m')
+";
+
+$salaryResult = mysqli_query($con, $salaryQuery);
+while($row = mysqli_fetch_assoc($salaryResult)) {
+    $month = $row['month'];
+    if(!isset($expensesData[$month])) {
+        $expensesData[$month] = 0;
+    }
+    $expensesData[$month] += floatval($row['amount']);
+}
+
+// 3. Get Equipment expenses
+$equipmentQuery = "
+    SELECT 
+        DATE_FORMAT(date, '%Y-%m') as month,
+        SUM(cost) as amount
+    FROM equipment
+    WHERE YEAR(date) = $year
+    GROUP BY DATE_FORMAT(date, '%Y-%m')
+";
+
+$equipmentResult = mysqli_query($con, $equipmentQuery);
+while($row = mysqli_fetch_assoc($equipmentResult)) {
+    $month = $row['month'];
+    if(!isset($expensesData[$month])) {
+        $expensesData[$month] = 0;
+    }
+    $expensesData[$month] += floatval($row['amount']);
+}
+
+// ============================================
+// COMBINE DATA FOR ALL 12 MONTHS
+// ============================================
+
 $months = [];
 for($i = 1; $i <= 12; $i++) {
     $monthKey = sprintf("%d-%02d", $year, $i);
