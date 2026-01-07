@@ -1,6 +1,5 @@
 <?php
  
-
 include 'includes/header.php';
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== "Admin") {
     header("Location: ../no_access.php");
@@ -34,6 +33,24 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== "Admin") {
 <!-- Equipment Section -->
 <section class="padding">
     <div class="container">
+        <!-- Search Bar -->
+        <div class="row mb-3">
+            <div class="col-12">
+                <div class="search-container">
+                    <i class="fas fa-search search-icon"></i>
+                    <input 
+                        type="text" 
+                        id="equipmentSearch" 
+                        class="search-input" 
+                        placeholder="Search by name, type, serial number, or model..."
+                    >
+                    <button id="clearSearch" class="clear-search" style="display: none;">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- Status Filter Buttons -->
         <div class="row">
             <div class="col-12">
@@ -211,6 +228,64 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== "Admin") {
 </div>
 
 <style>
+/* Search Container Styles */
+.search-container {
+    position: relative;
+    margin-bottom: 20px;
+}
+
+.search-icon {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #666;
+    font-size: 16px;
+    pointer-events: none;
+}
+
+.search-input {
+    width: 100%;
+    padding: 12px 45px 12px 45px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    font-size: 14px;
+    transition: all 0.3s;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: #ff7607;
+    box-shadow: 0 0 0 3px rgba(255, 118, 7, 0.1);
+}
+
+.clear-search {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: #f44336;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s;
+}
+
+.clear-search:hover {
+    background: #d32f2f;
+    transform: translateY(-50%) scale(1.1);
+}
+
+.clear-search i {
+    font-size: 12px;
+}
+
 .tab-navigation {
     display: flex;
     gap: 10px;
@@ -327,15 +402,27 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== "Admin") {
     transform: translateY(-1px);
     box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
 }
+
+/* Highlight matching search terms */
+.search-highlight {
+    background-color: #fff3cd;
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-weight: 600;
+}
 </style>
 
 <script>
 // ============================================
-// LOAD EQUIPMENT WITH STATUS FILTER
+// LOAD EQUIPMENT WITH STATUS FILTER & SEARCH
 // ============================================
-function loadEquipment(status = null) {
+function loadEquipment(status = null, searchTerm = null) {
     if (status === null) {
         status = $('.tab-btn.active').data('status');
+    }
+    
+    if (searchTerm === null) {
+        searchTerm = $('#equipmentSearch').val().trim();
     }
     
     $('#equipmentTable').html('<div class="text-center" style="padding: 40px;"><i class="fas fa-spinner fa-spin" style="font-size: 36px; color: #ff7607;"></i><p style="margin-top: 15px;">Loading equipment...</p></div>');
@@ -343,7 +430,10 @@ function loadEquipment(status = null) {
     $.ajax({
         url: 'admin-equipment-show-ajax.php',
         type: 'POST',
-        data: { status: status },
+        data: { 
+            status: status,
+            search: searchTerm
+        },
         success: function(response) {
             $('#equipmentTable').html(response);
         },
@@ -355,6 +445,32 @@ function loadEquipment(status = null) {
         }
     });
 }
+
+// SEARCH FUNCTIONALITY
+let searchTimeout;
+$('#equipmentSearch').on('input', function() {
+    clearTimeout(searchTimeout);
+    const searchTerm = $(this).val().trim();
+    
+    // Show/hide clear button
+    if (searchTerm.length > 0) {
+        $('#clearSearch').show();
+    } else {
+        $('#clearSearch').hide();
+    }
+    
+    // Debounce search (wait 500ms after user stops typing)
+    searchTimeout = setTimeout(function() {
+        loadEquipment(null, searchTerm);
+    }, 500);
+});
+
+// CLEAR SEARCH
+$('#clearSearch').on('click', function() {
+    $('#equipmentSearch').val('');
+    $(this).hide();
+    loadEquipment(null, '');
+});
 
 // TAB NAVIGATION (STATUS FILTERS)
 $(document).on('click', '.tab-btn', function() {
@@ -444,13 +560,10 @@ $(document).on('click', '.viewCostHistoryBtn', function() {
 
 // SCHEDULE MAINTENANCE
 function scheduleMaintenanceCurrent(equipmentId) {
-    const maintenanceType = $('#maintenanceType').val().trim();
+    
     const maintenanceDescription = $('#maintenanceDescription').val().trim();
 
-    if (!maintenanceType) {
-        alert('Please enter the maintenance type.');
-        return;
-    }
+    
 
     if (!maintenanceDescription) {
         alert('Please enter the maintenance description.');

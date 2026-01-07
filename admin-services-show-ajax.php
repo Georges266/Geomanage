@@ -30,7 +30,7 @@ if ($status === 'services') {
                 <div class='card p-3 request-card'>
                     <h5>".htmlspecialchars($row['service_name'])."</h5>
                     <p>".htmlspecialchars($row['description'])."</p>
-                    <p><strong>range Price:</strong> ".(int)$row['min_price']."-".$row['max_price']."</p>
+                    <p><strong>Base Price:</strong> ".(int)$row['min_price']."</p>
                     <p><strong>ID:</strong> ".(int)$row['service_id']."</p>
                     <p>".htmlspecialchars($row['status'])."</p>
 

@@ -16,8 +16,8 @@ if(isset($_POST['request_id'], $_POST['status'])) {
             exit;
         }
 
-        // Fetch min and max price from the database for this request/service
-        $queryPrice = "SELECT min_price, max_price FROM service_request sr 
+        // Fetch min price from the database for this request/service
+        $queryPrice = "SELECT min_price FROM service_request sr 
                        JOIN service s ON sr.service_id = s.service_id 
                        WHERE sr.request_id = '$id' LIMIT 1";
         $resultPrice = mysqli_query($con, $queryPrice);
@@ -25,10 +25,9 @@ if(isset($_POST['request_id'], $_POST['status'])) {
         if ($resultPrice && mysqli_num_rows($resultPrice) > 0) {
             $row = mysqli_fetch_assoc($resultPrice);
             $minPrice = floatval($row['min_price']);
-            $maxPrice = floatval($row['max_price']);
 
-            if ($price < $minPrice || $price > $maxPrice) {
-                echo "error: Price must be between $minPrice and $maxPrice";
+            if ($price < $minPrice) {
+                echo "error: Price must be at least $minPrice";
                 exit;
             }
         }

@@ -34,10 +34,7 @@ if (!$row) {
     <input type="number" id="edit_min_price" class="form-control" value="<?php echo $row['min_price']; ?>" step="0.01">
 </div>
 
-<div class="mb-3">
-    <label>Max Price</label>
-    <input type="number" id="edit_max_price" class="form-control" value="<?php echo $row['max_price']; ?>" step="0.01">
-</div>
+ 
 
 <div class="mb-3">
     <label>Description</label>

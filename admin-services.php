@@ -382,22 +382,19 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== "Admin") {
     <div style="padding: 20px;">
       
       <div class="mb-3">
-        <label>Service Name *</label>
+        <label>Service Name </label>
         <input type="text" id="add_service_name" class="form-control" placeholder="Enter service name" required>
       </div>
 
       <div class="mb-3">
-        <label>Min Price *</label>
+        <label>Base Price </label>
         <input type="number" id="add_min_price" class="form-control" placeholder="Enter minimum price" step="0.01" min="0" required>
       </div>
 
-      <div class="mb-3">
-        <label>Max Price *</label>
-        <input type="number" id="add_max_price" class="form-control" placeholder="Enter maximum price" step="0.01" min="0" required>
-      </div>
+       
 
       <div class="mb-3">
-        <label>Description *</label>
+        <label>Description </label>
         <textarea id="add_description" class="form-control" rows="4" placeholder="Enter service description" required></textarea>
       </div>
 
@@ -853,7 +850,7 @@ $(document).on('click', '#saveServiceBtn', function() {
         status: $('#edit_service_status').val(),
         service_name: $('#edit_service_name').val(),
         min_price: $('#edit_min_price').val(),
-        max_price: $('#edit_max_price').val(),
+        
         description: $('#edit_description').val()
     }, function(response) {
         alert(response);
@@ -878,7 +875,7 @@ $(document).on('click', '#addServiceBtn', function() {
     }
     $('#addServiceModal').fadeIn(300);
     $('body').css('overflow', 'hidden');
-    $('#add_service_name, #add_min_price, #add_max_price, #add_description').val('');
+    $('#add_service_name, #add_min_price,  #add_description').val('');
 });
 
 $(document).on('click', '#closeAddModal, #closeAddModalBtn', function() {
@@ -890,7 +887,7 @@ $(document).on('click', '#saveNewServiceBtn', function() {
     $.post('admin-services-add-service-query.php', {
         service_name: $('#add_service_name').val().trim(),
         min_price: $('#add_min_price').val(),
-        max_price: $('#add_max_price').val(),
+         
         description: $('#add_description').val().trim()
     }, function(response) {
         alert(response);

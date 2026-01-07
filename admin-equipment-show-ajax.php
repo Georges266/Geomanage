@@ -1,8 +1,9 @@
 <?php
 include 'includes/connect.php';
 
-// Get status filter
+// Get status filter and search term
 $status = isset($_POST['status']) ? mysqli_real_escape_string($con, $_POST['status']) : 'all';
+$search = isset($_POST['search']) ? mysqli_real_escape_string($con, $_POST['search']) : '';
 
 // ================= MAINTENANCE HISTORY TAB =================
 if ($status === 'history') {
@@ -13,9 +14,16 @@ if ($status === 'history') {
         MAX(m.request_date) AS last_date,
         COUNT(m.maintenance_id) AS total_maintenance
     FROM equipment e
-    LEFT JOIN maintenance m ON e.equipment_id = m.equipment_id
-    GROUP BY e.equipment_id
-    ORDER BY total_maintenance DESC, e.equipment_id ASC";
+    LEFT JOIN maintenance m ON e.equipment_id = m.equipment_id";
+    
+    // Add search condition for history tab
+    if (!empty($search)) {
+        $query .= " WHERE e.equipment_name LIKE '%$search%' 
+                    OR e.equipment_type LIKE '%$search%'";
+    }
+    
+    $query .= " GROUP BY e.equipment_id
+                ORDER BY total_maintenance DESC, e.equipment_id ASC";
     
     $result = mysqli_query($con, $query);
     
@@ -26,7 +34,10 @@ if ($status === 'history') {
     }
     
     if (mysqli_num_rows($result) == 0) {
-        echo "<div class='col-12'><p class='text-center text-muted my-3'>No equipment found.</p></div>";
+        $message = !empty($search) 
+            ? "No equipment found matching '<strong>" . htmlspecialchars($search) . "</strong>'"
+            : "No equipment found.";
+        echo "<div class='col-12'><p class='text-center text-muted my-3'>{$message}</p></div>";
     } else {
         echo '<div class="table-responsive">
                 <table class="table table-striped table-hover" style="background: white; border-radius: 8px; overflow: hidden;">
@@ -49,6 +60,12 @@ if ($status === 'history') {
             $lastDate = $row['last_date'] ? date("M d, Y", strtotime($row['last_date'])) : 'N/A';
             $total = (int)$row['total_maintenance'];
             
+            // Highlight search terms
+            if (!empty($search)) {
+                $name = highlightSearchTerm($name, $search);
+                $type = highlightSearchTerm($type, $search);
+            }
+            
             echo "<tr>
                     <td>#EQ-{$id}</td>
                     <td>{$name}</td>
@@ -58,7 +75,7 @@ if ($status === 'history') {
                     <td>
                         <button class='btn btn-sm btn-primary viewCostHistoryBtn' 
                                 data-id='{$id}' 
-                                data-name='{$name}'
+                                data-name='" . htmlspecialchars($row['equipment_name']) . "'
                                 style='padding: 6px 12px; font-size: 13px;'>
                             <i class='fas fa-dollar-sign'></i> View Costs
                         </button>
@@ -88,8 +105,22 @@ LEFT JOIN project ON upe.project_id = project.project_id
 LEFT JOIN lead_engineer ON project.lead_engineer_id = lead_engineer.lead_engineer_id
 LEFT JOIN user AS lead_user ON lead_engineer.user_id = lead_user.user_id";
 
+// Build WHERE clause
+$whereConditions = array();
+
 if ($status !== 'all') {
-    $query .= " WHERE equipment.status = '$status'";
+    $whereConditions[] = "equipment.status = '$status'";
+}
+
+if (!empty($search)) {
+    $whereConditions[] = "(equipment.equipment_name LIKE '%$search%' 
+                          OR equipment.equipment_type LIKE '%$search%' 
+                          OR equipment.serial_number LIKE '%$search%' 
+                          OR equipment.model LIKE '%$search%')";
+}
+
+if (!empty($whereConditions)) {
+    $query .= " WHERE " . implode(" AND ", $whereConditions);
 }
 
 $query .= " GROUP BY equipment.equipment_id
@@ -113,7 +144,10 @@ echo '<div class="row mb-3">
       </div>'; 
 
 if (mysqli_num_rows($result) == 0) {
-    echo "<div class='col-12'><p class='text-center text-muted my-3'>No equipment found.</p></div>";
+    $message = !empty($search) 
+        ? "No equipment found matching '<strong>" . htmlspecialchars($search) . "</strong>'"
+        : "No equipment found.";
+    echo "<div class='col-12'><p class='text-center text-muted my-3'>{$message}</p></div>";
 } else {
     echo '<div class="row">';
 
@@ -133,6 +167,14 @@ if (mysqli_num_rows($result) == 0) {
         $maintenance   = $row['date']
             ? date("M d, Y", strtotime($row['date']))
             : 'N/A';
+
+        // Highlight search terms
+        if (!empty($search)) {
+            $name = highlightSearchTerm($name, $search);
+            $type = highlightSearchTerm($type, $search);
+            $serial = highlightSearchTerm($serial, $search);
+            $model = highlightSearchTerm($model, $search);
+        }
 
         $statusClass = 'status-' . strtolower(str_replace(' ', '-', $status));
 ?>
@@ -198,7 +240,7 @@ if (mysqli_num_rows($result) == 0) {
                                 class="dl-btn approveRequestBtn"
                                 data-equipment-id="<?php echo $id; ?>"
                                 data-project-id="<?php echo $project_id; ?>"
-                                data-equipment-name="<?php echo $name; ?>"
+                                data-equipment-name="<?php echo htmlspecialchars($row['equipment_name']); ?>"
                                 data-project-name="<?php echo $project_name; ?>"
                                 data-lead-name="<?php echo $lead_name; ?>"
                                 style="padding: 5px 10px; font-size: 12px; background: #28a745; border: none; cursor: pointer;">
@@ -218,4 +260,21 @@ if (mysqli_num_rows($result) == 0) {
 }
 
 mysqli_close($con);
+
+// Helper function to highlight search terms
+function highlightSearchTerm($text, $searchTerm) {
+    if (empty($searchTerm)) {
+        return $text;
+    }
+    
+    // Escape special regex characters in search term
+    $searchTerm = preg_quote($searchTerm, '/');
+    
+    // Use regex to replace matching text with highlighted version (case-insensitive)
+    return preg_replace(
+        '/(' . $searchTerm . ')/i',
+        '<span class="search-highlight">$1</span>',
+        $text
+    );
+}
 ?>

@@ -197,10 +197,7 @@ $hasAssignments = ($assignmentResult && mysqli_num_rows($assignmentResult) > 0);
             <?php if ($isCompleted): ?>
                 <!-- Show completed maintenance details -->
                 <div style="background: #d4edda; padding: 15px; border-left: 3px solid #28a745; border-radius: 8px; margin-bottom: 15px;">
-                    <p style="margin-bottom: 8px;">
-                        <strong style="color: #155724;"><i class="fas fa-check-circle"></i> Status:</strong>
-                        <span style="color: #155724; font-weight: 600;"> Completed</span>
-                    </p>
+                    
                     <p style="margin-bottom: 0;">
                         <strong style="color: #155724;">Last Maintenance Date:</strong>
                         <span style="color: #155724;"><?php echo date("M d, Y", strtotime($maintenance_date)); ?></span>

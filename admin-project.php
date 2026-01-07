@@ -110,6 +110,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 ?>
 
+<?php
+// Count available surveyors (not assigned to any active project)
+$query = "SELECT COUNT(DISTINCT surveyor.surveyor_id) AS available_surveyors
+          FROM surveyor
+          LEFT JOIN project p ON p.project_id = surveyor.project_id 
+          WHERE p.project_id IS NULL and surveyor.status='available';";
+          
+$result = mysqli_query($con, $query);
+$row = mysqli_fetch_assoc($result);
+$available_surveyors = $row['available_surveyors'] ?? 0;
+?>
+
+
 <!-- Page Header -->
 <section class="page-header padding bg-grey">
     <div class="container">
@@ -122,6 +135,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <button type="button" class="default-btn" onclick="openModal('createProjectModal')">
                     <i class="fas fa-plus"></i> Create New Project
                 </button>
+            </div>
+        </div>
+         <!-- 🔹 Available Surveyors Info -->
+        <div class="row" style="margin-top: 20px;">
+            <div class="col-12">
+                <div style="background: #fff; border-radius: 8px; padding: 15px 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-left: 4px solid #FF9800; display: flex; align-items: center; justify-content: space-between;">
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <div style="background: #FFF3E0; padding: 12px; border-radius: 8px;">
+                            <i class="fas fa-user-tie" style="font-size: 24px; color: #FF9800;"></i>
+                        </div>
+                        <div>
+                            <p style="margin: 0; color: #666; font-size: 13px; font-weight: 600;">Available Surveyors</p>
+                            <h3 style="margin: 0; color: #FF9800; font-size: 28px;"><?php echo $available_surveyors; ?></h3>
+                        </div>
+                    </div>
+                    <div>
+                        <small style="color: #999; font-size: 12px;">
+                            <i class="fas fa-info-circle"></i> Surveyors not assigned to active projects
+                        </small>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -1060,7 +1094,23 @@ select[name="Lead_Engineer"] option[value=""] {
 }
 
 
+/* Available Surveyors Info Card */
+.page-header .row:last-child > div > div {
+    transition: transform 0.2s, box-shadow 0.2s;
+}
 
+.page-header .row:last-child > div > div:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+}
+
+@media (max-width: 768px) {
+    .page-header .row:last-child > div > div {
+        flex-direction: column;
+        align-items: flex-start !important;
+        gap: 10px;
+    }
+}
 
 </style>
 <?php 

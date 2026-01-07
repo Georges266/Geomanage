@@ -145,7 +145,7 @@ $(document).on('click', '.removeEquipmentBtn', function() {
 // SCHEDULE MAINTENANCE
 function scheduleMaintenanceCurrent() {
     const equipmentId = $('#maintenanceEquipmentId').val();
-    const maintenanceType = $('#maintenanceType').val().trim();
+   
     const maintenanceDescription = $('#maintenanceDescription').val().trim();
 
     console.log('Equipment ID:', equipmentId);
@@ -155,10 +155,6 @@ function scheduleMaintenanceCurrent() {
         return;
     }
 
-    if (!maintenanceType) {
-        alert('Please enter the maintenance type.');
-        return;
-    }
 
     if (!maintenanceDescription) {
         alert('Please enter the maintenance description.');
@@ -183,7 +179,7 @@ function scheduleMaintenanceCurrent() {
                 alert('Success: ' + response);
                 closeModal('maintenanceRequestModal');
 
-                $('#maintenanceType').val('');
+                
                 $('#maintenanceDescription').val('');
 
                 setTimeout(() => {
