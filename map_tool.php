@@ -17,21 +17,20 @@
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
       overflow: hidden;
+      background: #f8f9fa;
     }
 
     #root {
       width: 100vw;
       height: 100vh;
+      display: flex;
+      flex-direction: column;
     }
 
+    /* Loading Spinner */
     @keyframes spin {
-      0% {
-        transform: rotate(0deg);
-      }
-
-      100% {
-        transform: rotate(360deg);
-      }
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
     }
 
     .spinner {
@@ -44,13 +43,7 @@
       margin: 0 auto;
     }
 
-    .sidebar-content {
-      max-height: calc(100vh - 120px);
-      overflow-y: auto;
-      overflow-x: hidden;
-      padding-bottom: 80px;
-    }
-
+    /* Sidebar Scrollbar */
     .sidebar-content::-webkit-scrollbar {
       width: 8px;
     }
@@ -69,28 +62,139 @@
       background: #555;
     }
 
-    .save-button-container {
+    /* Card Styles */
+    .info-card {
+      padding: 14px;
+      border-radius: 8px;
+      margin-bottom: 12px;
+    }
+
+    .card-primary {
+      background: #e7f3ff;
+      border: 2px solid #0066cc;
+    }
+
+    .card-secondary {
+      background: #f8f9fa;
+      border: 2px solid #dee2e6;
+    }
+
+    .card-success {
+      background: #d4edda;
+      border: 2px solid #28a745;
+    }
+
+    .card-warning {
+      background: #fff3cd;
+      border: 2px solid #ffc107;
+    }
+
+    .card-info {
+      background: #d1ecf1;
+      border: 2px solid #17a2b8;
+    }
+
+    /* Button Styles */
+    .btn {
+      padding: 12px 20px;
+      border: none;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.3s;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .btn-primary {
+      background: #0066cc;
+      color: white;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: #0052a3;
+    }
+
+    .btn-success {
+      background: #28a745;
+      color: white;
+    }
+
+    .btn-success:hover:not(:disabled) {
+      background: #218838;
+    }
+
+    .btn-secondary {
+      background: #6c757d;
+      color: white;
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background: #5a6268;
+    }
+
+    /* Badge */
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-left: 8px;
+    }
+
+    .badge-success {
+      background: #28a745;
+      color: white;
+    }
+
+    /* Search Results Dropdown */
+    .search-dropdown {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 120px;
+      margin-top: 4px;
+      background: white;
+      border: 1px solid #dee2e6;
+      border-radius: 6px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      max-height: 300px;
+      overflow-y: auto;
+      z-index: 1000;
+    }
+
+    .search-result-item {
+      padding: 12px 14px;
+      cursor: pointer;
+      border-bottom: 1px solid #f1f1f1;
+      transition: background 0.2s;
+    }
+
+    .search-result-item:last-child {
+      border-bottom: none;
+    }
+
+    .search-result-item:hover {
+      background: #f8f9fa;
+    }
+
+    /* Sticky Footer */
+    .sticky-footer {
       position: sticky;
       bottom: 0;
       background: white;
       padding: 16px;
       border-top: 2px solid #e9ecef;
-      margin: 0 -16px -16px -16px;
       box-shadow: 0 -4px 6px rgba(0, 0, 0, 0.05);
-    }
-
-    .api-badge {
-      display: inline-block;
-      padding: 2px 8px;
-      border-radius: 4px;
-      font-size: 11px;
-      font-weight: 600;
-      margin-left: 8px;
-    }
-
-    .api-badge.real {
-      background: #d4edda;
-      color: #155724;
     }
   </style>
 </head>
@@ -98,12 +202,12 @@
 <body>
   <div id="root"></div>
 
-  <!-- Leaflet mapping libraries -->
+  <!-- Leaflet Libraries -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
   <script src="https://unpkg.com/leaflet-geometryutil@0.10.1/src/leaflet.geometryutil.js"></script>
   
-  <!-- React libraries -->
+  <!-- React -->
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -112,7 +216,7 @@
     const { useState, useEffect, useRef } = React;
 
     const LandMappingTool = () => {
-      // State management
+      // State Management
       const [map, setMap] = useState(null);
       const [drawnItems, setDrawnItems] = useState(null);
       const [measurements, setMeasurements] = useState(null);
@@ -121,18 +225,23 @@
       const [searchQuery, setSearchQuery] = useState('');
       const [searchResults, setSearchResults] = useState([]);
       const [isSearching, setIsSearching] = useState(false);
+      
+      // Refs
       const mapRef = useRef(null);
       const satelliteLayerRef = useRef(null);
       const streetLayerRef = useRef(null);
 
-      // Office location - used as reference point for distance calculations
+      // Check if opened from land listing page (photo mode)
+      const isPhotoMode = window.location.search.includes('source=listing');
+
+      // Office location for distance calculations (only in service mode)
       const OFFICE_LOCATION = {
         lat: 34.56677094701796, 
         lng: 36.086523881335964,
         name: "Our Office Location"
       };
 
-      // Initialize map when component mounts
+      // Initialize map on mount
       useEffect(() => {
         if (window.L && mapRef.current) {
           initializeMap();
@@ -140,7 +249,7 @@
       }, []);
 
       /**
-       * Initialize the Leaflet map with drawing controls
+       * Initialize Leaflet map with drawing controls
        */
       const initializeMap = () => {
         const L = window.L;
@@ -148,43 +257,43 @@
         // Create map centered on Lebanon
         const mapInstance = L.map(mapRef.current).setView([33.8547, 35.8623], 9);
 
-        // Add OpenStreetMap tile layer (default)
+        // Street map layer
         const streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           attribution: '© OpenStreetMap contributors',
           maxZoom: 19
         }).addTo(mapInstance);
 
-        // Add Esri World Imagery satellite layer (not added by default)
+        // Satellite layer (not added by default)
         const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
           attribution: 'Tiles &copy; Esri',
           maxZoom: 19
         });
 
-        // Store layer references
         streetLayerRef.current = streetLayer;
         satelliteLayerRef.current = satelliteLayer;
 
-        // Create custom red marker icon for office location
-        const officeIcon = L.icon({
-          iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
-          shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
-          iconSize: [25, 41],
-          iconAnchor: [12, 41],
-          popupAnchor: [1, -34],
-          shadowSize: [41, 41]
-        });
+        // Add office marker (only in service mode)
+        if (!isPhotoMode) {
+          const officeIcon = L.icon({
+            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34],
+            shadowSize: [41, 41]
+          });
 
-        // Add office marker to map
-        L.marker([OFFICE_LOCATION.lat, OFFICE_LOCATION.lng], { icon: officeIcon })
-          .addTo(mapInstance)
-          .bindPopup(`<b>${OFFICE_LOCATION.name}</b><br>Starting point for distance calculations`)
-          .openPopup();
+          L.marker([OFFICE_LOCATION.lat, OFFICE_LOCATION.lng], { icon: officeIcon })
+            .addTo(mapInstance)
+            .bindPopup(`<b>${OFFICE_LOCATION.name}</b><br>Starting point for distance calculations`)
+            .openPopup();
+        }
 
-        // Create feature group to store drawn shapes
+        // Drawing layer
         const drawnItemsLayer = new L.FeatureGroup();
         mapInstance.addLayer(drawnItemsLayer);
 
-        // Add drawing controls to map
+        // Drawing controls
         const drawControl = new L.Control.Draw({
           draw: {
             polygon: {
@@ -211,26 +320,19 @@
         });
         mapInstance.addControl(drawControl);
 
-        // Handle when a shape is created
+        // Event handlers
         mapInstance.on(L.Draw.Event.CREATED, (e) => {
-          // Clear any previous shapes (only one shape at a time)
           drawnItemsLayer.clearLayers();
-          const layer = e.layer;
-          drawnItemsLayer.addLayer(layer);
-          
-          // Analyze the drawn land
-          analyzeLand(layer, mapInstance);
+          drawnItemsLayer.addLayer(e.layer);
+          analyzeLand(e.layer, mapInstance);
         });
 
-        // Handle when a shape is edited
         mapInstance.on(L.Draw.Event.EDITED, (e) => {
-          const layers = e.layers;
-          layers.eachLayer((layer) => {
+          e.layers.eachLayer((layer) => {
             analyzeLand(layer, mapInstance);
           });
         });
 
-        // Handle when a shape is deleted
         mapInstance.on(L.Draw.Event.DELETED, () => {
           setMeasurements(null);
         });
@@ -242,15 +344,13 @@
       /**
        * Toggle between satellite and street view
        */
-      const toggleSatellite = () => {
-        if (!map || !satelliteLayerRef.current || !streetLayerRef.current) return;
+      const toggleMapView = () => {
+        if (!map) return;
 
         if (useSatellite) {
-          // Switch to street view
           map.removeLayer(satelliteLayerRef.current);
           map.addLayer(streetLayerRef.current);
         } else {
-          // Switch to satellite view
           map.removeLayer(streetLayerRef.current);
           map.addLayer(satelliteLayerRef.current);
         }
@@ -258,7 +358,7 @@
       };
 
       /**
-       * Search for locations using Photon API (CORS-friendly alternative)
+       * Search for locations using Photon API
        */
       const handleSearch = async () => {
         if (!searchQuery.trim() || !map) return;
@@ -267,20 +367,14 @@
         setSearchResults([]);
 
         try {
-          // Use Photon API which is CORS-friendly
           const response = await fetch(
-            `https://photon.komoot.io/api/?q=${encodeURIComponent(searchQuery)}&limit=5&lang=en`,
-            {
-              headers: {
-                'Accept': 'application/json'
-              }
-            }
+            `https://photon.komoot.io/api/?q=${encodeURIComponent(searchQuery)}&limit=5&lang=en`
           );
 
           if (!response.ok) throw new Error('Search failed');
           const data = await response.json();
           
-          // Filter results for Lebanon or nearby
+          // Filter for Lebanon or nearby
           const filtered = data.features.filter(f => 
             !f.properties.country || 
             f.properties.country === 'Lebanon' || 
@@ -299,31 +393,23 @@
       };
 
       /**
- * Navigate to selected search result and place a marker
- */
-const selectSearchResult = (result) => {
-  if (!map || !drawnItems) return;
+       * Select search result and place marker
+       */
+      const selectSearchResult = (result) => {
+        if (!map || !drawnItems) return;
 
-  const [lon, lat] = result.geometry.coordinates;
-  const L = window.L;
-  
-  // Clear any existing shapes
-  drawnItems.clearLayers();
-  
-  // Create and add marker at the search result location
-  const marker = L.marker([lat, lon]);
-  drawnItems.addLayer(marker);
-  
-  // Center map on the location
-  map.setView([lat, lon], 14);
-  
-  // Analyze the land at this location
-  analyzeLand(marker, map);
-  
-  // Clear search results
-  setSearchResults([]);
-  setSearchQuery('');
-};
+        const [lon, lat] = result.geometry.coordinates;
+        const L = window.L;
+        
+        drawnItems.clearLayers();
+        const marker = L.marker([lat, lon]);
+        drawnItems.addLayer(marker);
+        map.setView([lat, lon], 14);
+        analyzeLand(marker, map);
+        
+        setSearchResults([]);
+        setSearchQuery('');
+      };
 
       /**
        * Get display name for search result
@@ -342,7 +428,7 @@ const selectSearchResult = (result) => {
       };
 
       /**
-       * Main analysis function - extracts data from drawn shape and calculates metrics
+       * Analyze land - extract coordinates, calculate area, get elevation
        */
       const analyzeLand = async (layer, mapInstance) => {
         setIsLoading(true);
@@ -354,16 +440,13 @@ const selectSearchResult = (result) => {
           let isMarker = false;
           let center;
 
-          // Extract coordinates and calculate area based on shape type
+          // Extract data based on shape type
           if (layer instanceof L.Polygon || layer instanceof L.Rectangle) {
-            // For polygons/rectangles
             coordinates = layer.getLatLngs()[0].map(ll => [ll.lat, ll.lng]);
-            area = L.GeometryUtil.geodesicArea(layer.getLatLngs()[0]); // Area in square meters
-            const bounds = layer.getBounds();
-            center = bounds.getCenter();
+            area = L.GeometryUtil.geodesicArea(layer.getLatLngs()[0]);
+            center = layer.getBounds().getCenter();
             isMarker = false;
           } else if (layer instanceof L.Marker) {
-            // For single point markers
             const ll = layer.getLatLng();
             coordinates = [[ll.lat, ll.lng]];
             center = ll;
@@ -371,34 +454,42 @@ const selectSearchResult = (result) => {
             isMarker = true;
           }
 
-          // Calculate straight-line distance from office to land center
-          const distance = calculateDistance(
-            OFFICE_LOCATION.lat, 
-            OFFICE_LOCATION.lng, 
-            center.lat, 
-            center.lng
-          );
-
-          // Get elevation data from API
-          const elevationData = await getElevationData(coordinates, isMarker);
-
-          // Try to get driving route from office to land
-          let route = null;
-          try {
-            route = await getRoute(OFFICE_LOCATION, center, mapInstance);
-          } catch (e) {
-            console.log('Route not available');
+          // Calculate distance from office (only in service mode)
+          let distance = 0;
+          if (!isPhotoMode) {
+            distance = calculateDistance(
+              OFFICE_LOCATION.lat, 
+              OFFICE_LOCATION.lng, 
+              center.lat, 
+              center.lng
+            );
           }
 
-          // Store all measurements
+          // Get elevation data (only in service mode)
+          let elevationData = null;
+          if (!isPhotoMode) {
+            elevationData = await getElevationData(coordinates, isMarker);
+          }
+
+          // Get driving route (only in service mode)
+          let route = null;
+          if (!isPhotoMode) {
+            try {
+              route = await getRoute(OFFICE_LOCATION, center, mapInstance);
+            } catch (e) {
+              console.log('Route not available');
+            }
+          }
+
+          // Store measurements
           setMeasurements({
             coordinates,
-            area: (area / 10000).toFixed(2), // Convert to hectares
-            areaM2: area.toFixed(2), // Keep in square meters
+            area: (area / 10000).toFixed(2), // hectares
+            areaM2: area.toFixed(2), // square meters
             center: [center.lat, center.lng],
             elevation: elevationData,
-            distance: distance.toFixed(2), // in kilometers
-            distanceMeters: (distance * 1000).toFixed(2), // in meters
+            distance: distance.toFixed(2), // km
+            distanceMeters: (distance * 1000).toFixed(2), // meters
             route,
             officeLocation: OFFICE_LOCATION,
             isMarker: isMarker
@@ -407,18 +498,16 @@ const selectSearchResult = (result) => {
           setIsLoading(false);
 
         } catch (error) {
-          console.error('Error in analyzeLand:', error);
+          console.error('Error analyzing land:', error);
           setIsLoading(false);
-          alert('An unexpected error occurred: ' + error.message);
+          alert('An error occurred: ' + error.message);
         }
       };
 
       /**
        * Get elevation data from Open-Meteo API
-       * This API provides global elevation data from satellite measurements
        */
       const getElevationData = async (coordinates, isMarker) => {
-        // For polygons, sample up to 10 points for better accuracy
         let samplePoints = coordinates;
         if (!isMarker && coordinates.length > 10) {
           const step = Math.floor(coordinates.length / 10);
@@ -428,7 +517,6 @@ const selectSearchResult = (result) => {
         try {
           const elevations = [];
           
-          // Fetch elevation for each sample point
           for (const point of samplePoints) {
             const response = await fetch(
               `https://api.open-meteo.com/v1/elevation?latitude=${point[0]}&longitude=${point[1]}`,
@@ -448,7 +536,6 @@ const selectSearchResult = (result) => {
 
           if (elevations.length === 0) throw new Error('No elevation data');
 
-          // Process the elevation data
           return processElevations(elevations, samplePoints, isMarker);
 
         } catch (error) {
@@ -458,15 +545,13 @@ const selectSearchResult = (result) => {
       };
 
       /**
-       * Process elevation data and calculate slope + terrain factor
+       * Process elevation data and calculate slope
        */
       const processElevations = (elevations, points, isMarker) => {
-        // Calculate statistics
         const avgElevation = elevations.reduce((a, b) => a + b, 0) / elevations.length;
         const maxElevation = Math.max(...elevations);
         const minElevation = Math.min(...elevations);
 
-        // For single markers, no slope calculation needed
         if (isMarker) {
           return {
             average: avgElevation.toFixed(2),
@@ -479,35 +564,26 @@ const selectSearchResult = (result) => {
           };
         }
 
-        // For polygons, calculate slope
         const elevationDiff = maxElevation - minElevation;
 
-        // Find the maximum distance between any two points in the polygon
         let maxDistance = 0;
         for (let i = 0; i < points.length; i++) {
           for (let j = i + 1; j < points.length; j++) {
             const dist = calculateDistance(
               points[i][0], points[i][1],
               points[j][0], points[j][1]
-            ) * 1000; // Convert to meters
+            ) * 1000;
             maxDistance = Math.max(maxDistance, dist);
           }
         }
 
-        // Calculate slope percentage: (rise / run) * 100
         const slope = maxDistance > 0 ? (elevationDiff / maxDistance) * 100 : 0;
 
-        // Determine terrain difficulty factor based on slope
         let terrainFactor;
-        if (slope < 5) {
-          terrainFactor = 1.0; // Flat terrain
-        } else if (slope < 15) {
-          terrainFactor = 1.2; // Gentle slope
-        } else if (slope < 30) {
-          terrainFactor = 1.5; // Moderate slope
-        } else {
-          terrainFactor = 2.0; // Steep slope
-        }
+        if (slope < 5) terrainFactor = 1.0;
+        else if (slope < 15) terrainFactor = 1.2;
+        else if (slope < 30) terrainFactor = 1.5;
+        else terrainFactor = 2.0;
 
         return {
           average: avgElevation.toFixed(2),
@@ -521,8 +597,7 @@ const selectSearchResult = (result) => {
       };
 
       /**
-       * Get driving route from office to land using OSRM API
-       * Displays the route on the map and returns distance/duration
+       * Get driving route using OSRM API
        */
       const getRoute = async (from, to, mapInstance) => {
         const controller = new AbortController();
@@ -542,7 +617,6 @@ const selectSearchResult = (result) => {
           if (data.routes && data.routes.length > 0) {
             const route = data.routes[0];
             
-            // Draw route on map
             if (mapInstance) {
               const L = window.L;
               const routeCoords = route.geometry.coordinates.map(coord => [coord[1], coord[0]]);
@@ -554,8 +628,8 @@ const selectSearchResult = (result) => {
             }
             
             return {
-              distance: (route.distance / 1000).toFixed(2), // Convert to km
-              duration: (route.duration / 60).toFixed(0) // Convert to minutes
+              distance: (route.distance / 1000).toFixed(2),
+              duration: (route.duration / 60).toFixed(0)
             };
           }
           return null;
@@ -566,11 +640,10 @@ const selectSearchResult = (result) => {
       };
 
       /**
-       * Calculate straight-line distance between two geographic points
-       * Uses Haversine formula
+       * Calculate distance using Haversine formula
        */
       const calculateDistance = (lat1, lon1, lat2, lon2) => {
-        const R = 6371; // Earth's radius in kilometers
+        const R = 6371;
         const dLat = toRad(lat2 - lat1);
         const dLon = toRad(lon2 - lon1);
         const a =
@@ -578,22 +651,18 @@ const selectSearchResult = (result) => {
           Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
           Math.sin(dLon / 2) * Math.sin(dLon / 2);
         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        return R * c; // Distance in kilometers
+        return R * c;
       };
 
-      /**
-       * Convert degrees to radians
-       */
       const toRad = (degrees) => degrees * (Math.PI / 180);
 
       /**
-       * Clear all drawn shapes and measurements from the map
+       * Clear all drawings
        */
       const clearAll = () => {
         if (drawnItems) drawnItems.clearLayers();
         setMeasurements(null);
         
-        // Remove route lines from map
         if (map) {
           map.eachLayer((layer) => {
             if (layer instanceof window.L.Polyline && !(layer instanceof window.L.Polygon)) {
@@ -604,8 +673,7 @@ const selectSearchResult = (result) => {
       };
 
       /**
-       * Send measurement data back to parent window (form)
-       * Used when this tool is opened as a popup
+       * Send data to parent window (service mode only)
        */
       const saveToForm = () => {
         if (measurements && window.opener) {
@@ -620,7 +688,6 @@ const selectSearchResult = (result) => {
               elevation_min: measurements.elevation.min,
               slope: measurements.elevation.slope,
               terrain_factor: parseFloat(measurements.elevation.terrainFactor) || 1.0,
-              // Send route distance (actual driving distance), fallback to straight-line if unavailable
               distance_from_office: measurements.route ? measurements.route.distance : measurements.distance
             }
           }, '*');
@@ -628,54 +695,33 @@ const selectSearchResult = (result) => {
         }
       };
 
-      // Render the UI
+      // Render
       return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#f8f9fa' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
           {/* Header */}
-          <div style={{ background: 'white', padding: '16px', borderBottom: '1px solid #dee2e6', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+          <header style={{ background: 'white', padding: '16px', borderBottom: '1px solid #dee2e6', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
               <div>
-                <h1 style={{ fontSize: '24px', fontWeight: 'bold', color: '#212529', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+                <h1 style={{ fontSize: '24px', fontWeight: 'bold', color: '#212529', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
                   📍 Land Mapping Tool
+                  {isPhotoMode && <span className="badge badge-success">Photo Mode</span>}
                 </h1>
                 <p style={{ fontSize: '14px', color: '#6c757d', margin: '4px 0 0 0' }}>
-                  Draw a polygon or place a marker to mark the land boundaries
+                  {isPhotoMode 
+                    ? 'Draw your land boundaries and take a screenshot' 
+                    : 'Draw land boundaries to analyze area, elevation, and distance'}
                 </p>
               </div>
               
-              {/* Satellite toggle button */}
               <button 
-                onClick={toggleSatellite}
-                style={{ 
-                  padding: '10px 16px', 
-                  background: useSatellite ? '#0066cc' : '#f8f9fa',
-                  color: useSatellite ? 'white' : '#212529',
-                  border: '1px solid #dee2e6', 
-                  borderRadius: '6px', 
-                  cursor: 'pointer',
-                  fontWeight: '600',
-                  fontSize: '14px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  transition: 'all 0.3s'
-                }}
-                onMouseOver={(e) => {
-                  if (!useSatellite) {
-                    e.target.style.background = '#e9ecef';
-                  }
-                }}
-                onMouseOut={(e) => {
-                  if (!useSatellite) {
-                    e.target.style.background = '#f8f9fa';
-                  }
-                }}
+                onClick={toggleMapView}
+                className="btn btn-secondary"
               >
                 🛰️ {useSatellite ? 'Satellite View' : 'Street View'}
               </button>
             </div>
 
-            {/* Search bar */}
+            {/* Search Bar */}
             <div style={{ display: 'flex', gap: '8px', position: 'relative' }}>
               <input 
                 type="text"
@@ -695,58 +741,19 @@ const selectSearchResult = (result) => {
               <button 
                 onClick={handleSearch}
                 disabled={isSearching || !searchQuery.trim()}
-                style={{
-                  padding: '10px 20px',
-                  background: '#0066cc',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: isSearching || !searchQuery.trim() ? 'not-allowed' : 'pointer',
-                  fontWeight: '600',
-                  fontSize: '14px',
-                  opacity: isSearching || !searchQuery.trim() ? 0.6 : 1,
-                  transition: 'all 0.3s'
-                }}
-                onMouseOver={(e) => {
-                  if (!isSearching && searchQuery.trim()) {
-                    e.target.style.background = '#0052a3';
-                  }
-                }}
-                onMouseOut={(e) => {
-                  e.target.style.background = '#0066cc';
-                }}
+                className="btn btn-primary"
               >
                 {isSearching ? '🔍 Searching...' : '🔍 Search'}
               </button>
 
-              {/* Search results dropdown */}
+              {/* Search Results */}
               {searchResults.length > 0 && (
-                <div style={{
-                  position: 'absolute',
-                  top: '100%',
-                  left: 0,
-                  right: '120px',
-                  marginTop: '4px',
-                  background: 'white',
-                  border: '1px solid #dee2e6',
-                  borderRadius: '6px',
-                  boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-                  maxHeight: '300px',
-                  overflowY: 'auto',
-                  zIndex: 1000
-                }}>
+                <div className="search-dropdown">
                   {searchResults.map((result, index) => (
                     <div
                       key={index}
                       onClick={() => selectSearchResult(result)}
-                      style={{
-                        padding: '12px 14px',
-                        cursor: 'pointer',
-                        borderBottom: index < searchResults.length - 1 ? '1px solid #f1f1f1' : 'none',
-                        transition: 'background 0.2s'
-                      }}
-                      onMouseOver={(e) => e.currentTarget.style.background = '#f8f9fa'}
-                      onMouseOut={(e) => e.currentTarget.style.background = 'white'}
+                      className="search-result-item"
                     >
                       <div style={{ fontWeight: '600', fontSize: '14px', color: '#212529' }}>
                         {result.properties.name || 'Unnamed'}
@@ -759,109 +766,151 @@ const selectSearchResult = (result) => {
                 </div>
               )}
             </div>
-          </div>
+          </header>
 
-          {/* Main content area */}
+          {/* Main Content */}
           <div style={{ flex: 1, display: 'flex' }}>
-            {/* Map container */}
+            {/* Map */}
             <div ref={mapRef} style={{ flex: 1, height: '100%' }} />
 
             {/* Sidebar */}
-            <div style={{ width: '384px', background: 'white', boxShadow: '-2px 0 8px rgba(0,0,0,0.1)', display: 'flex', flexDirection: 'column' }}>
-              {/* Sidebar header */}
+            <aside style={{ width: '384px', background: 'white', boxShadow: '-2px 0 8px rgba(0,0,0,0.1)', display: 'flex', flexDirection: 'column' }}>
+              {/* Sidebar Header */}
               <div style={{ padding: '16px', borderBottom: '1px solid #e9ecef' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#212529', margin: 0 }}>Land Analysis</h2>
+                  <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#212529', margin: 0 }}>
+                    {isPhotoMode ? 'Screenshot Guide' : 'Land Analysis'}
+                  </h2>
                   {measurements && (
-                    <button onClick={clearAll} style={{ padding: '8px', background: 'transparent', border: 'none', borderRadius: '4px', cursor: 'pointer', transition: 'background 0.3s' }}
-                      onMouseOver={(e) => e.target.style.background = '#f8f9fa'}
-                      onMouseOut={(e) => e.target.style.background = 'transparent'}>
+                    <button onClick={clearAll} className="btn" style={{ padding: '8px', background: 'transparent' }}>
                       ✕
                     </button>
                   )}
                 </div>
               </div>
 
-              {/* Sidebar content */}
+              {/* Sidebar Content */}
               <div className="sidebar-content" style={{ flex: 1, padding: '16px', overflowY: 'auto' }}>
-                {/* Empty state */}
+                {/* Empty State */}
                 {!measurements && !isLoading && (
                   <div style={{ textAlign: 'center', padding: '32px 0', color: '#6c757d' }}>
                     <div style={{ fontSize: '48px', margin: '0 auto 16px', opacity: 0.5 }}>📍</div>
-                    <p style={{ fontSize: '14px' }}>Use the drawing tools on the map to mark the land</p>
-                    <p style={{ fontSize: '12px', marginTop: '8px' }}>The red marker shows our office location</p>
+                    <p style={{ fontSize: '14px', marginBottom: '8px' }}>Use the drawing tools to mark the land</p>
+                    {!isPhotoMode && <p style={{ fontSize: '12px' }}>Red marker shows office location</p>}
+                    {isPhotoMode && <p style={{ fontSize: '12px' }}>Follow screenshot instructions below</p>}
                   </div>
                 )}
 
-                {/* Loading state */}
+                {/* Loading State */}
                 {isLoading && (
                   <div style={{ textAlign: 'center', padding: '32px 0' }}>
                     <div className="spinner" />
-                    <p style={{ fontSize: '14px', color: '#6c757d', marginTop: '16px' }}>Analyzing land data...</p>
-                    <p style={{ fontSize: '12px', color: '#6c757d', marginTop: '8px' }}>Fetching real elevation data from satellite...</p>
+                    <p style={{ fontSize: '14px', color: '#6c757d', marginTop: '16px' }}>
+                      {isPhotoMode ? 'Preparing map...' : 'Analyzing land data...'}
+                    </p>
                   </div>
                 )}
 
-                {/* Measurement results */}
-                {!isLoading && measurements && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    {/* Area card */}
-                    <div style={{ background: '#e7f3ff', padding: '12px', borderRadius: '8px' }}>
+                {/* SERVICE MODE - Show Analysis */}
+                {!isLoading && measurements && !isPhotoMode && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {/* Area */}
+                    <div className="info-card card-primary">
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                         <span style={{ fontSize: '20px' }}>📏</span>
-                        <h3 style={{ fontWeight: '600', color: '#212529', margin: 0 }}>Area</h3>
+                        <h3 style={{ fontWeight: '600', color: '#212529', margin: 0, fontSize: '16px' }}>Area</h3>
                       </div>
                       {measurements.isMarker ? (
-                        <p style={{ fontSize: '16px', color: '#6c757d', margin: 0 }}>
-                          No area calculated (single point marker)
+                        <p style={{ fontSize: '14px', color: '#6c757d', margin: 0 }}>
+                          Single point (no area)
                         </p>
                       ) : (
                         <>
-                          <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#0066cc', margin: '4px 0' }}>{measurements.area} hectares</p>
-                          <p style={{ fontSize: '14px', color: '#6c757d', margin: 0 }}>{measurements.areaM2} m²</p>
+                          <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#0066cc', margin: '4px 0' }}>
+                            {measurements.area} hectares
+                          </p>
+                          <p style={{ fontSize: '14px', color: '#6c757d', margin: 0 }}>
+                            {measurements.areaM2} m²
+                          </p>
                         </>
                       )}
                     </div>
 
-                    {/* Coordinates card */}
-                    <div style={{ background: '#f8f9fa', padding: '12px', borderRadius: '8px' }}>
-                      <h3 style={{ fontWeight: '600', color: '#212529', marginBottom: '8px' }}>
+                    {/* Coordinates */}
+                    <div className="info-card card-secondary">
+                      <h3 style={{ fontWeight: '600', color: '#212529', marginBottom: '8px', fontSize: '16px' }}>
                         {measurements.isMarker ? 'Point Coordinates' : 'Center Coordinates'}
                       </h3>
-                      <div style={{ fontSize: '14px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                        <p style={{ margin: 0 }}><span style={{ fontWeight: '600' }}>Latitude:</span> {measurements.center[0].toFixed(6)}</p>
-                        <p style={{ margin: 0 }}><span style={{ fontWeight: '600' }}>Longitude:</span> {measurements.center[1].toFixed(6)}</p>
+                      <p style={{ fontSize: '14px', margin: '4px 0' }}>
+                        <strong>Latitude:</strong> {measurements.center[0].toFixed(6)}
+                      </p>
+                      <p style={{ fontSize: '14px', margin: '4px 0' }}>
+                        <strong>Longitude:</strong> {measurements.center[1].toFixed(6)}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* PHOTO MODE - Show Screenshot Instructions */}
+                {!isLoading && measurements && isPhotoMode && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {/* Simple Screenshot Message */}
+                    <div className="info-card card-success">
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                        <span style={{ fontSize: '32px' }}>✅</span>
+                        <h3 style={{ fontWeight: '600', margin: 0, fontSize: '18px', color: '#155724' }}>
+                          Map Ready!
+                        </h3>
                       </div>
+                      <p style={{ fontSize: '15px', margin: 0, lineHeight: '1.6', color: '#155724' }}>
+                        Take a screenshot of your land drawing and upload it in the listing form.
+                      </p>
                     </div>
                   </div>
                 )}
               </div>
 
-              {/* Sticky save button */}
+              {/* Sticky Footer Button */}
               {!isLoading && measurements && (
-                <div className="save-button-container">
-                  <button onClick={saveToForm} style={{ width: '100%', background: '#0066cc', color: 'white', fontWeight: '600', padding: '12px 16px', borderRadius: '8px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'background 0.3s' }}
-                    onMouseOver={(e) => e.target.style.background = '#0052a3'}
-                    onMouseOut={(e) => e.target.style.background = '#0066cc'}>
-                    💾 Use This Data
-                  </button>
+                <div className="sticky-footer">
+                  {/* Service Mode */}
+                  {!isPhotoMode && (
+                    <button onClick={saveToForm} className="btn btn-primary" style={{ width: '100%' }}>
+                      💾 Use This Data
+                    </button>
+                  )}
+                  
+                  {/* Photo Mode */}
+                  {isPhotoMode && (
+                    <div className="info-card card-info" style={{ margin: 0 }}>
+                      <p style={{ margin: 0, fontSize: '14px', fontWeight: '600', textAlign: 'center', color: '#0c5460' }}>
+                        📸 Take a screenshot and upload it in your listing
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
-            </div>
+            </aside>
           </div>
 
-          {/* Footer instructions */}
-          <div style={{ background: 'white', borderTop: '1px solid #dee2e6', padding: '12px 16px', fontSize: '14px', color: '#6c757d' }}>
-            <p style={{ margin: 0 }}><strong>Instructions:</strong> The red marker shows our office location. Draw the land boundaries to calculate area, elevation, slope, and distance from office.</p>
-          </div>
+          {/* Footer */}
+          <footer style={{ background: 'white', borderTop: '1px solid #dee2e6', padding: '12px 16px', fontSize: '14px', color: '#6c757d' }}>
+            <p style={{ margin: 0 }}>
+              <strong>Instructions:</strong> 
+              {isPhotoMode ? (
+                <> Draw your land boundaries, then take a screenshot and upload it when listing your land.</>
+              ) : (
+                <> Draw land boundaries to analyze area, elevation, slope, and distance from office.</>
+              )}
+            </p>
+          </footer>
         </div>
       );
     };
 
-    // Render the application
+    // Render App
     const root = ReactDOM.createRoot(document.getElementById('root'));
     root.render(<LandMappingTool />);
   </script>
 </body>
-
 </html>

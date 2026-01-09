@@ -552,7 +552,6 @@ while ($row = mysqli_fetch_assoc($result)) {
                 'hire_email': 'Email',
                 'hire_password': 'Password',
                 'hire_role': 'Role',
-                'hire_position': 'Position',
                 'hire_salary': 'Salary',
                 'hire_start_date': 'Start Date',
                 'hire_signing_date': 'Signing Date'

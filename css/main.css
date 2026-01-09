@@ -253,3 +253,46 @@ select:focus {
 /* ============================================
    END SELECT DROPDOWN FIX
    ============================================ */
+
+
+   /* Land Info Card Styling */
+.land-info-card {
+    background: #f8f9fa;
+    border-radius: 5px;
+    padding: 12px;
+    margin-bottom: 10px;
+    border-left: 3px solid #4caf50;
+    position: relative;
+}
+
+.land-info-card h6 {
+    margin-bottom: 8px;
+    color: #263a4f !important;
+    font-size: 14px;
+}
+
+.land-info-card p {
+    font-size: 12px;
+    margin-bottom: 3px;
+    color: #666 !important;
+}
+
+.land-info-card p strong {
+    color: #263a4f !important;
+}
+
+/* Ensure text visibility on hover */
+.project-section:hover .land-info-card p,
+.service-item:hover .land-info-card p {
+    color: #666 !important;
+}
+
+.project-section:hover .land-info-card h6,
+.service-item:hover .land-info-card h6 {
+    color: #263a4f !important;
+}
+
+.project-section:hover .land-info-card p strong,
+.service-item:hover .land-info-card p strong {
+    color: #263a4f !important;
+}

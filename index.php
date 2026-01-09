@@ -3,6 +3,29 @@ include 'includes/header.php';
 if (isset($_SESSION['role']) && $_SESSION['role'] !== "Client") {
     exit();
 }
+include 'includes/connect.php'; 
+// Count Expert Team Members (roles: lead engineer + surveyor)
+$expertsQuery = "SELECT COUNT(*) AS experts_count 
+                 FROM user 
+                 WHERE role IN ('lead engineer', 'surveyor')";
+$expertsResult = mysqli_query($con, $expertsQuery);
+$expertsRow = mysqli_fetch_assoc($expertsResult);
+$expertsCount = $expertsRow['experts_count'];
+
+// Count Surveys Completed (projects table)
+$projectsQuery = "SELECT COUNT(*) AS projects_count FROM project";
+$projectsResult = mysqli_query($con, $projectsQuery);
+$projectsRow = mysqli_fetch_assoc($projectsResult);
+$projectsCount = $projectsRow['projects_count'];
+
+// Count Clients Served (users with role client)
+$clientsQuery = "SELECT COUNT(*) AS clients_count 
+                 FROM user 
+                 WHERE role = 'Client'";
+$clientsResult = mysqli_query($con, $clientsQuery);
+$clientsRow = mysqli_fetch_assoc($clientsResult);
+$clientsCount = $clientsRow['clients_count'];
+
 ?>
 <!doctype html>
 <html class="no-js" lang="en"> 
@@ -126,7 +149,7 @@ Decades of experience serving engineers, developers, and government institutions
 <h2>Comprehensive Land Surveying Solutions</h2>
 <p>GeoManage provides an integrated range of surveying services, from boundary demarcation and topographic mapping to subdivision design and construction layout. Our goal is precision, reliability, and efficiency in every project.</p>
 <p>We serve residential, commercial, and governmental clients with the latest surveying technology and experienced professionals.</p>
-<a href="#" class="default-btn">View All Services</a>
+<a href="services.php" class="default-btn">View All Services</a>
 </div>
 </div>
 <div class="col-lg-6 sm-padding">
@@ -168,33 +191,39 @@ Decades of experience serving engineers, developers, and government institutions
 <section class="counter-section padding">
 <div class="container">
 <div class="row counter-wrap">
-<div class="col-lg-3 col-sm-6 padding-15">
-<div class="counter-content wow fadeInUp" data-wow-delay="100ms">
-<div class="counter"><span class="odometer" data-count="150">00</span></div>
-<h4>Clients Served</h4>
-</div>
-</div>
-<div class="col-lg-3 col-sm-6 padding-15">
-<div class="counter-content wow fadeInUp" data-wow-delay="200ms">
-<div class="counter"><span class="odometer" data-count="500">00</span></div>
-<h4>Surveys Completed</h4>
-</div>
-</div>
-<div class="col-lg-3 col-sm-6 padding-15">
-<div class="counter-content wow fadeInUp" data-wow-delay="300ms">
-<div class="counter"><span class="odometer" data-count="10">00</span></div>
-<h4>Years of Experience</h4>
-</div>
-</div>
-<div class="col-lg-3 col-sm-6 padding-15">
-<div class="counter-content wow fadeInUp" data-wow-delay="400ms">
-<div class="counter"><span class="odometer" data-count="20">00</span></div>
-<h4>Expert Team Members</h4>
-</div>
-</div>
+
+    <div class="col-lg-3 col-sm-6 padding-15">
+        <div class="counter-content wow fadeInUp" data-wow-delay="100ms">
+            <div class="counter"><span class="odometer" data-count="<?php echo $clientsCount; ?>">00</span></div>
+            <h4>Clients Served</h4>
+        </div>
+    </div>
+
+    <div class="col-lg-3 col-sm-6 padding-15">
+        <div class="counter-content wow fadeInUp" data-wow-delay="200ms">
+            <div class="counter"><span class="odometer" data-count="<?php echo $projectsCount; ?>">00</span></div>
+            <h4>Surveys Completed</h4>
+        </div>
+    </div>
+
+    <div class="col-lg-3 col-sm-6 padding-15">
+        <div class="counter-content wow fadeInUp" data-wow-delay="300ms">
+            <div class="counter"><span class="odometer" data-count="10">00</span></div>
+            <h4>Years of Experience</h4>
+        </div>
+    </div>
+
+    <div class="col-lg-3 col-sm-6 padding-15">
+        <div class="counter-content wow fadeInUp" data-wow-delay="400ms">
+            <div class="counter"><span class="odometer" data-count="<?php echo $expertsCount; ?>">00</span></div>
+            <h4>Expert Team Members</h4>
+        </div>
+    </div>
+
 </div>
 </div>
 </section>
+
 
 <section class="projects-section padding">
 <div class="container">

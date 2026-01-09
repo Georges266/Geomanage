@@ -35,7 +35,7 @@ if(isset($_POST['hire'])){
     $endDate = mysqli_real_escape_string($con, $_POST['end_date']);
     $signingDate = mysqli_real_escape_string($con, $_POST['signing_date']);
     $salary = (float)$_POST['salary'];
-    $position = mysqli_real_escape_string($con, $_POST['position']);
+   // $position = mysqli_real_escape_string($con, $_POST['position']);
     
     $createdAt = date('Y-m-d H:i:s');
 
@@ -94,8 +94,7 @@ if(isset($_POST['hire'])){
         
         // Insert into contract table
         $insertContract = "INSERT INTO contract (start_date, end_date, signing_date, salary, position, user_id)
-                          VALUES ('$startDate', " . 
-                          ($endDate ? "'$endDate'" : "NULL") . ", '$signingDate', '$salary', '$role', '$userId')";
+                          VALUES ('$startDate','$endDate' , '$signingDate', '$salary', '$role', '$userId')";
         
         if (!mysqli_query($con, $insertContract)) {
             throw new Exception("Error creating contract: " . mysqli_error($con));

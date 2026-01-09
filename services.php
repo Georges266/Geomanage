@@ -502,7 +502,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           "flaticon-conveyor"
         ];
 
-        $query  = "SELECT * FROM service";
+        $query  = "SELECT * FROM service where status= 'active'";
         $result = mysqli_query($con, $query);
 
         while ($row = mysqli_fetch_assoc($result)) {
@@ -546,31 +546,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
               <form method="post" class="form-horizontal" id="service-request-form" enctype="multipart/form-data">
                 <input type="hidden" name="service_id" value="<?php echo $selectedService; ?>">
 
-                <!-- Full name & Email -->
-                <div class="form-group colum-row row">
-                  <div class="col-md-6">
-                    <label>Full Name <span style="color: red;">*</span></label>
-                    <input type="text" class="form-control" name="full_name" placeholder="Your full name" required>
-                  </div>
-                  <div class="col-md-6">
-                    <label>Email Address <span style="color: red;">*</span></label>
-                    <input type="email" class="form-control" name="email" placeholder="Your email address" required>
-                  </div>
-                </div>
-
-                <!-- Phone -->
-                <div class="form-group colum-row row">
-                  <div class="col-md-6">
-                    <label>Phone Number <span style="color: red;">*</span></label>
-                    <input type="tel" class="form-control" name="phone" placeholder="Your phone number" required>
-                  </div>
-                </div>
-
                 <!-- Location -->
                 <div class="form-group colum-row row">
                   <div class="col-md-12">
                     <label>Survey Location <span style="color: red;">*</span></label>
-                    <input type="text" class="form-control" name="location" placeholder="Address or coordinates of the property" required>
+                    <input type="text" class="form-control" name="location" placeholder="Addressv of the property" required>
                   </div>
                 </div>
                 <!-- Area Size -->

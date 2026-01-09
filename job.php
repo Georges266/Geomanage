@@ -1,22 +1,28 @@
 <?php
 include 'includes/connect.php';
 include 'includes/header.php';
-if (isset($_SESSION['role']) && $_SESSION['role'] !== "Client") {
-    exit();
+
+// Check if user is logged in and get their info
+$is_logged_in = isset($_SESSION['user_id']);
+$client_id = null;
+$user = null;
+
+if ($is_logged_in) {
+    // Check if user is a client
+    if (isset($_SESSION['role']) && $_SESSION['role'] !== "Client") {
+        exit();
+    }
+    
+    // Get client_id from user_id
+    $user = $_SESSION['user_id'];
+    $q1 = "SELECT client_id FROM client WHERE user_id = $user";
+    $r1 = mysqli_query($con, $q1);
+    
+    if (mysqli_num_rows($r1) > 0) {
+        $row_client = mysqli_fetch_assoc($r1);
+        $client_id = $row_client['client_id'];
+    }
 }
-
-// Get client_id from user_id
-$user = $_SESSION['user_id'];
-$q1 = "SELECT client_id FROM client WHERE user_id = $user";
-$r1 = mysqli_query($con, $q1);
-
-if (mysqli_num_rows($r1) == 0) {
-    echo "Client record not found.";
-    exit();
-}
-
-$row_client = mysqli_fetch_assoc($r1);
-$client_id = $row_client['client_id'];
 
 // Fetch open job opportunities
 $q = "SELECT * FROM job_opportunity WHERE status = 'Open'";
@@ -26,8 +32,8 @@ $r = mysqli_query($con, $q);
 $success_message = '';
 $error_message = '';
 
-// Handle form submission
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['first_name'])) {
+// Handle form submission - ONLY if logged in
+if ($is_logged_in && $_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['first_name'])) {
     
     $first_name = mysqli_real_escape_string($con, $_POST['first_name']);
     $last_name = mysqli_real_escape_string($con, $_POST['last_name']);
@@ -116,6 +122,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['first_name'])) {
 </div>
 <?php endif; ?>
 
+<?php if (!$is_logged_in): ?>
+<div class="container" style="margin-top: 20px;">
+<div class="alert alert-info" style="padding: 15px; background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; border-radius: 5px; text-align: center;">
+<i class="fas fa-info-circle"></i> To apply for positions, please <a href="login.php" style="color: #0c5460; font-weight: bold; text-decoration: underline;">log in</a> or <a href="signup.php" style="color: #0c5460; font-weight: bold; text-decoration: underline;">create an account</a>.
+</div>
+</div>
+<?php endif; ?>
+
 <!-- Current Openings Section -->
 <section class="service-section padding bg-grey">
 <div class="dots"></div>
@@ -123,7 +137,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['first_name'])) {
 <div class="section-heading text-center mb-40">
 <span>Open Positions</span>
 <h2>Current Job Openings</h2>
-<p>Click on any position to apply</p>
+<p>Click on any position to <?php echo $is_logged_in ? 'apply' : 'view details'; ?></p>
 </div>
 <div class="row">
 <?php 
@@ -140,7 +154,9 @@ if (mysqli_num_rows($r) > 0) {
 <h3><?php echo $job_title; ?></h3>
 <p><?php echo htmlspecialchars($row['responsibilities']); ?>.</p>
 <p><?php echo htmlspecialchars($row['requirements']); ?>.</p>
-<button class="read-more apply-now-btn" data-job-id="<?php echo $job_id; ?>" data-job-title="<?php echo $job_title; ?>">Apply Now</button>
+<button class="read-more apply-now-btn" data-job-id="<?php echo $job_id; ?>" data-job-title="<?php echo $job_title; ?>" data-logged-in="<?php echo $is_logged_in ? '1' : '0'; ?>">
+    <?php echo $is_logged_in ? 'Apply Now' : 'Login to Apply'; ?>
+</button>
 </div>
 </div>
 <?php 
@@ -153,7 +169,7 @@ if (mysqli_num_rows($r) > 0) {
 </div>
 </section>
 
-<!-- Job Application Modal -->
+<?php if ($is_logged_in): ?>
 <div id="job-application-modal" class="land-modal">
 <div class="land-modal-content" style="max-width: 700px;">
 <span class="land-modal-close">&times;</span>
@@ -213,28 +229,16 @@ if (mysqli_num_rows($r) > 0) {
 </div>
 </div>
 </div>
+<?php endif; ?>
 
 <script>
-// Modal functionality
+// Check if user is logged in
+const isLoggedIn = <?php echo $is_logged_in ? 'true' : 'false'; ?>;
+
+// Modal functionality - only if logged in
+<?php if ($is_logged_in): ?>
 const modal = document.getElementById('job-application-modal');
 const closeBtn = document.querySelector('.land-modal-close');
-const applyButtons = document.querySelectorAll('.apply-now-btn');
-
-// Open modal and populate job data
-applyButtons.forEach(button => {
-    button.addEventListener('click', function() {
-        const jobId = this.getAttribute('data-job-id');
-        const jobTitle = this.getAttribute('data-job-title');
-        
-        document.getElementById('selected-job-title').textContent = jobTitle;
-        document.getElementById('applied-position').value = jobTitle;
-        document.getElementById('applied-job-id').value = jobId;
-        
-        modal.style.display = 'block';
-        document.getElementById('job-application-form').reset();
-        document.getElementById('file-name').textContent = '';
-    });
-});
 
 // Close modal
 closeBtn.addEventListener('click', function() {
@@ -256,6 +260,33 @@ document.getElementById('resume-file').addEventListener('change', function(e) {
     } else {
         fileDisplay.textContent = '';
     }
+});
+<?php endif; ?>
+
+// Apply button functionality
+const applyButtons = document.querySelectorAll('.apply-now-btn');
+
+applyButtons.forEach(button => {
+    button.addEventListener('click', function() {
+        const loggedIn = this.getAttribute('data-logged-in') === '1';
+        
+        if (!loggedIn) {
+            // Redirect to login page
+            window.location.href = 'login.php';
+        } else {
+            // Open application modal
+            const jobId = this.getAttribute('data-job-id');
+            const jobTitle = this.getAttribute('data-job-title');
+            
+            document.getElementById('selected-job-title').textContent = jobTitle;
+            document.getElementById('applied-position').value = jobTitle;
+            document.getElementById('applied-job-id').value = jobId;
+            
+            modal.style.display = 'block';
+            document.getElementById('job-application-form').reset();
+            document.getElementById('file-name').textContent = '';
+        }
+    });
 });
 </script>
 

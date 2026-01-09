@@ -53,8 +53,8 @@ session_start();
             <?php if (!isset($_SESSION['user_id']) || (isset($_SESSION['role']) && $_SESSION['role'] === "Client")) { ?>
                 <li><a href="index.php">Home</a></li>
                 <li><a href="projects.php">Projects</a></li>
-                <li><a href="land-sale.php">Lands</a></li>
-                
+                <li><a href="land-sale.php">Land Market</a></li>
+                <li><a href="job.php">Careers</a></li>
             <?php } ?>
 
             <!-- Guest only -->
@@ -65,8 +65,7 @@ session_start();
             <!-- Normal User only -->
             <?php if (isset($_SESSION['role']) && $_SESSION['role'] === "Client") { ?>
                 <li><a href="client-dashboard.php">My Projects</a></li>
-                <li><a href="cost-estimation.php">Land Calculator</a></li>
-                <li><a href="job.php">Careers</a></li>
+                <li><a href="cost-estimation.php">Land Valuation</a></li>
                 <li><a href="services.php">Services</a></li>
                 <li><a style="color: #ff0000; font-family: 'Work Sans', sans-serif; font-size: 12px; font-weight: 600; text-transform: uppercase; padding: 0 30px; height: 80px; line-height: 80px; text-decoration: none; transition: all 0.5s;" href="logout.php">Logout</a></li>
             <?php } ?>
@@ -84,32 +83,25 @@ session_start();
             <li><a href="hr-applications.php">applications</a></li>
             <li><a href="hr-schedule.php">schedule</a></li>
             <li><a href="hr-manage-emp.php">Employees</a></li>
-            <li><a href="projects.php">Projects</a></li>
-            <li><a href="land-sale.php">Lands</a></li>
             <li><a style="color: #ff0000; font-family: 'Work Sans', sans-serif; font-size: 12px; font-weight: 600; text-transform: uppercase; padding: 0 30px; height: 80px; line-height: 80px; text-decoration: none; transition: all 0.5s;" href="logout.php">Logout</a></li>
             <?php } ?>
              <?php if (isset($_SESSION['role']) && $_SESSION['role'] === "LeadEngineer") { ?>
              <li><a href="lead_eng-dashboard.php"> my projects</a></li>
             <li><a href="lead_eng-equipment.php">equipment</a></li>   
-            <!--<li><a href="lead_eng-reviewdeliverables.php">deliverables</a></li> 
-             <li><a href="projects.php">Projects</a></li>
-            <li><a href="land-sale.php">Lands</a></li>-->
             <li><a style="color: #ff0000; font-family: 'Work Sans', sans-serif; font-size: 12px; font-weight: 600; text-transform: uppercase; padding: 0 30px; height: 80px; line-height: 80px; text-decoration: none; transition: all 0.5s;" href="logout.php">Logout</a></li>
             <?php } ?>
              <?php if (isset($_SESSION['role']) && $_SESSION['role'] === "Maintenance_Technician") { ?>
-            <li><a href="maintenance.php">dashboard</a></li> 
-            <li><a href="projects.php">Projects</a></li>
-            <li><a href="land-sale.php">Lands</a></li>  
+            <li><a href="maintenance.php">dashboard</a></li>  
             <li><a style="color: #ff0000; font-family: 'Work Sans', sans-serif; font-size: 12px; font-weight: 600; text-transform: uppercase; padding: 0 30px; height: 80px; line-height: 80px; text-decoration: none; transition: all 0.5s;" href="logout.php">Logout</a></li>
             <?php } ?>
              <?php if (isset($_SESSION['role']) && $_SESSION['role'] === "Surveyor") { ?>
-              <li><a href="surveyor-deliverables.php">deliverables</a></li>   
+              <li><a href="surveyor-deliverables.php">deliverables</a></li>
+              <li><a href="surveyor-equipment.php">equipment</a></li>      
             <li><a style="color: #ff0000; font-family: 'Work Sans', sans-serif; font-size: 12px; font-weight: 600; text-transform: uppercase; padding: 0 30px; height: 80px; line-height: 80px; text-decoration: none; transition: all 0.5s;" href="logout.php">Logout</a></li>
               <?php } ?>
               <?php if (isset($_SESSION['role']) && $_SESSION['role'] === "Sales_Person") { ?>
                  <li><a href="sales_person.php">Lands</a></li>
-                 <li><a href="projects.php">Projects</a></li>
-                 <li><a href="land-sale.php">Lands</a></li>
+                 <li><a href="land-sale.php">lands marketplace</a></li>
                 <li><a style="color: #ff0000; font-family: 'Work Sans', sans-serif; font-size: 12px; font-weight: 600; text-transform: uppercase; padding: 0 30px; height: 80px; line-height: 80px; text-decoration: none; transition: all 0.5s;" href="logout.php">Logout</a></li>
               <?php } ?> 
           </ul>

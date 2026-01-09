@@ -4,8 +4,11 @@ include 'includes/connect.php';
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== "Sales_Person") { 
     exit();
 }
-
-include 'includes/connect.php';
+$user_id = $_SESSION['user_id'];
+$get_sales_id = "SELECT `sales_person_id` FROM `sales_person` WHERE user_id = '$user_id'";
+$result = mysqli_query($con, $get_sales_id);
+$row = mysqli_fetch_assoc($result);
+$sales_person_id = $row['sales_person_id'];
 
 // Handle form submissions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -37,16 +40,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit();
         }
         
-        if ($action == 'mark_sold') {
-            $sql = "UPDATE land_listing SET status = 'sold' WHERE listing_id = $listing_id";
-            if (mysqli_query($con, $sql)) {
-                $_SESSION['success_message'] = 'Listing marked as sold';
-            } else {
-                $_SESSION['error_message'] = 'Failed to mark as sold';
+                    if ($action == 'mark_sold') {
+                $sql1 = "SELECT `asking_price`, `company_percentage` 
+                        FROM `land_listing` 
+                        WHERE listing_id = $listing_id";
+                $r = mysqli_query($con, $sql1);
+
+                // Since one row is always guaranteed:
+                $row = mysqli_fetch_assoc($r);
+
+                $asking_price = $row['asking_price'];
+                $company_percentage = $row['company_percentage'];
+
+                $company_profit = $asking_price * ($company_percentage / 100);
+
+                $sql = "UPDATE land_listing 
+                        SET status = 'sold', company_profit = '$company_profit', sales_person_id='$sales_person_id'  
+                        WHERE listing_id = $listing_id";
+
+                if (mysqli_query($con, $sql)) {
+                    $_SESSION['success_message'] = 'Listing marked as sold';
+                } else {
+                    $_SESSION['error_message'] = 'Failed to mark as sold';
+                }
+
+                header("Location: " . $_SERVER['PHP_SELF']);
+                exit();
             }
-            header("Location: " . $_SERVER['PHP_SELF']);
-            exit();
-        }
         
         if ($action == 'reopen') {
             $sql = "UPDATE land_listing SET approval_status = 'Pending', status = 'not sold', rejection_reason = NULL WHERE listing_id = $listing_id";

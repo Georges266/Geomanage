@@ -179,6 +179,35 @@ if (isset($_GET['success']) && $_GET['success'] == 1) {
 <input type="text" name="location" class="form-control" placeholder="e.g., North District, Zahle" required>
 </div>
 </div>
+<div class="row">
+<div class="col-md-12 padding-15">
+<label style="display: block; margin-bottom: 8px; font-weight: 600; color: #263a4f;">
+🗺️ Add Land Location Map (Optional but Recommended)
+</label>
+<div style="background: #e7f3ff; border: 2px solid #0066cc; border-radius: 8px; padding: 15px; margin-bottom: 15px;">
+<p style="margin: 0 0 10px 0; color: #263a4f; font-size: 14px;">
+<strong>Want to show your land location on a map?</strong>
+</p>
+<p style="margin: 0 0 12px 0; color: #495057; font-size: 13px;">
+Use our interactive mapping tool to draw your land boundaries, then take a screenshot and upload it below with your other photos!
+</p>
+<button type="button" onclick="openMapForPhoto()" class="default-btn" style="width: 100%;">
+<i class="fas fa-map-marked-alt"></i> Open Map Tool (You'll Take a Screenshot)
+</button>
+<div style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 5px; padding: 10px; margin-top: 12px;">
+<p style="margin: 0; color: #856404; font-size: 12px;">
+<strong>📸 How it works:</strong>
+</p>
+<ol style="margin: 5px 0 0 0; padding-left: 20px; color: #856404; font-size: 12px; line-height: 1.6;">
+<li>Click the button above to open the map tool</li>
+<li>Draw your land boundaries on the map</li>
+<li>Take a screenshot using your device's screenshot feature</li>
+<li>Upload the screenshot in the "Land Photos" section below</li>
+</ol>
+</div>
+</div>
+</div>
+</div>
 
 <!-- Land Photos (Multiple) -->
 <div class="row">
@@ -270,20 +299,13 @@ Cancel
             </div>
 
             <!-- Location -->
-            <div class="col-lg-3 col-md-6 padding-15">
-              <div class="filter-group">
-                <label>Location</label>
-                <select class="form-control filter-select" name="location" id="location">
-                  <option value="">All Locations</option>
-                  <option value="north">North District</option>
-                  <option value="downtown">Downtown Area</option>
-                  <option value="rural">Rural Area</option>
-                  <option value="lakeview">Lakeview Area</option>
-                  <option value="industrial">Industrial Park</option>
-                  <option value="suburban">Suburban District</option>
-                </select>
-              </div>
-            </div>
+<div class="col-lg-3 col-md-6 padding-15">
+  <div class="filter-group">
+    <label>Location</label>
+    <input type="text" class="form-control" name="location" id="location" placeholder="Enter town or area">
+  </div>
+</div>
+
 
             <!-- Price Range -->
             <div class="col-lg-3 col-md-6 padding-15">
@@ -349,7 +371,7 @@ $query = "
             FROM land_photos 
             WHERE listing_id = ll.listing_id
         )
-    WHERE ll.approval_status = 'Approved'
+    WHERE ll.approval_status = 'Approved'AND ll.status !='sold'
 ";
 
 // Add filters
@@ -549,7 +571,29 @@ if (mysqli_num_rows($result) > 0) {
     }
 }
 </style>
-
+<script>
+/**
+ * Opens map tool in photo generation mode
+ */
+function openMapForPhoto() {
+    // Open map tool with source=listing parameter
+    const mapWindow = window.open(
+        'map_tool.php?source=listing', 
+        'MapToolPhoto', 
+        'width=1400,height=900'
+    );
+    
+    if (!mapWindow) {
+        alert('Please allow pop-ups for this site to use the map tool.\n\n' +
+              'Instructions:\n' +
+              '1. Allow pop-ups in your browser\n' +
+              '2. Click the button again\n' +
+              '3. Draw your land boundaries\n' +
+              '4. Download the map photo\n' +
+              '5. Upload it in the photo section below');
+    }
+}
+</script>
 <?php include 'includes/footer.html'; ?>
 </body>
 </html>

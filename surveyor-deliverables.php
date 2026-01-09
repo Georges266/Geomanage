@@ -1,6 +1,7 @@
 <?php
 include 'includes/header.php'; 
 include 'includes/connect.php'; 
+
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== "Surveyor") {
     exit();
 }
@@ -20,9 +21,6 @@ $surveyor_name = $surveyor_row['full_name'];
 $project_id  = $surveyor_row['project_id'];
 $surveyor_status = $surveyor_row['status'];
 
-// Check if surveyor has an active project assigned
-$has_active_project = !empty($project_id);
-
 // Initialize variables
 $project = null;
 $engineer_name = 'N/A';
@@ -31,6 +29,37 @@ $services_result = null;
 $lands_result = null;
 $files_result = null;
 $deliverables_result = null;
+$has_active_project = false;
+
+// Check if surveyor has a project assigned
+if (!empty($project_id)) {
+    // Get project details first to check status
+    $get_project = "SELECT * FROM project WHERE project_id = '$project_id' LIMIT 1";
+    $project_result = mysqli_query($con, $get_project);
+    $project = mysqli_fetch_assoc($project_result);
+    
+    // Check if project status is NOT 'active'
+    if ($project && strtolower($project['status']) !== 'active') {
+        // Project is completed or inactive - update surveyor status to 'not assigned'
+        $update_surveyor = "UPDATE surveyor 
+                           SET status = 'available', 
+                               project_id = NULL 
+                           WHERE surveyor_id = '$surveyor_id'";
+        mysqli_query($con, $update_surveyor);
+        
+        // Reset variables
+        $project_id = null;
+        $surveyor_status = 'available';
+        $project = null;
+        $has_active_project = false;
+        
+        // Refresh surveyor data
+        $_SESSION['project_completed_notice'] = "Your previous project has been completed. You are now available for new assignments.";
+    } else if ($project && strtolower($project['status']) === 'active') {
+        // Project is active - surveyor has an active project
+        $has_active_project = true;
+    }
+}
 
 if ($has_active_project) {
     // Handle land info update
@@ -147,11 +176,6 @@ if ($has_active_project) {
         exit();
     }
 
-    // Get project details
-    $get_project = "SELECT * FROM project WHERE project_id = '$project_id' LIMIT 1";
-    $project_result = mysqli_query($con, $get_project);
-    $project = mysqli_fetch_assoc($project_result);
-
     // Get lead engineer name
     $get_engineer = "SELECT u.full_name 
                      FROM lead_engineer le 
@@ -234,7 +258,7 @@ if ($has_active_project) {
                     }
                     
                     $_SESSION['upload_success'] = "Land file uploaded successfully!";
-                    header("Location: surveyor-deliverables.php.php");
+                    header("Location: surveyor-deliverables.php");
                     exit();
                 }
             }
@@ -274,7 +298,7 @@ if ($has_active_project) {
                     mysqli_query($con, $insert_deliverable);
                     
                     $_SESSION['upload_success'] = "Deliverable uploaded successfully!";
-                    header("Location: surveyor-deliverables.php.php");
+                    header("Location: surveyor-deliverables.php");
                     exit();
                 }
             }
@@ -313,10 +337,9 @@ if ($has_active_project) {
         case 'planning':
             $status_class = 'status-planning';
             break;
-        case 'in progress':
         case 'active':
             $status_class = 'status-in-progress';
-            $status_text = 'In Progress - ' . $project['progress'] . '%';
+            $status_text = 'Active - ' . $project['progress'] . '%';
             break;
         case 'on hold':
             $status_class = 'status-on-hold';
@@ -327,11 +350,25 @@ if ($has_active_project) {
     }
 }
 
-// Prepare lands data for JavaScript
+// Prepare lands data with services for JavaScript
 $lands_data = array();
 if ($has_active_project && $lands_result) {
     mysqli_data_seek($lands_result, 0);
     while($land = mysqli_fetch_assoc($lands_result)) {
+        // Get service requests for this land in this project
+        $get_land_services = "SELECT s.service_name 
+                              FROM service_request sr
+                              JOIN service s ON sr.service_id = s.service_id
+                              WHERE sr.project_id = '$project_id' 
+                              AND sr.land_id = '{$land['land_id']}'";
+        $land_services_result = mysqli_query($con, $get_land_services);
+        
+        $services = array();
+        while($service_row = mysqli_fetch_assoc($land_services_result)) {
+            $services[] = $service_row['service_name'];
+        }
+        
+        $land['services'] = $services;
         $lands_data[] = $land;
     }
 }
@@ -369,6 +406,14 @@ if ($has_active_project && $lands_result) {
 <!-- Project Sections -->
 <section class="padding">
     <div class="container">
+        <?php if (isset($_SESSION['project_completed_notice'])) { ?>
+            <!-- Project Completed Notice -->
+            <div class="alert alert-info" style="background: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+                <i class="fas fa-info-circle"></i> <?= htmlspecialchars($_SESSION['project_completed_notice']); ?>
+            </div>
+            <?php unset($_SESSION['project_completed_notice']); ?>
+        <?php } ?>
+
         <?php if (!$has_active_project) { ?>
             <!-- No Project Assigned Message -->
             <div class="no-project-message">
@@ -415,7 +460,7 @@ if ($has_active_project && $lands_result) {
                     <!-- Services Section -->
                     <?php if ($services_result && mysqli_num_rows($services_result) > 0) { ?>
                     <div class="services-section mb-4">
-                        <h5>Assigned Services</h5>
+                        <h5>All Services in Project</h5>
                         <div class="services-tags">
                             <?php 
                             mysqli_data_seek($services_result, 0);
@@ -436,9 +481,19 @@ if ($has_active_project && $lands_result) {
                     <div class="land-info-section mb-4">
                         <h5>Assigned Lands</h5>
                         <div class="row">
-                            <?php while($land = mysqli_fetch_assoc($lands_result)) { 
+                            <?php 
+                            $land_index = 0;
+                            while($land = mysqli_fetch_assoc($lands_result)) { 
                                 $geometry_approved = isset($land['geometry_approved']) ? $land['geometry_approved'] : 0;
                                 $terrain_approved = isset($land['terrain_approved']) ? $land['terrain_approved'] : 0;
+                                
+                                // Get services for this land
+                                $get_land_services = "SELECT s.service_name 
+                                                      FROM service_request sr
+                                                      JOIN service s ON sr.service_id = s.service_id
+                                                      WHERE sr.project_id = '$project_id' 
+                                                      AND sr.land_id = '{$land['land_id']}'";
+                                $land_services_result = mysqli_query($con, $get_land_services);
                             ?>
                                 <div class="col-md-6">
                                     <div class="land-info-card">
@@ -457,12 +512,30 @@ if ($has_active_project && $lands_result) {
                                         <p class="mb-1"><strong>Area:</strong> <?= number_format($land['land_area'], 1); ?> acres</p>
                                         <p class="mb-1"><strong>Type:</strong> <?= htmlspecialchars($land['land_type']); ?></p>
                                         <p class="mb-2"><strong>Coordinates:</strong> <?= htmlspecialchars($land['coordinates_latitude'] ?? 'N/A'); ?>, <?= htmlspecialchars($land['coordinates_longitude'] ?? 'N/A'); ?></p>
+                                        
+                                        <!-- Services for this land -->
+                                        <?php if (mysqli_num_rows($land_services_result) > 0) { ?>
+                                        <div class="land-services mb-2">
+                                            <strong style="font-size: 12px;">Requested Services:</strong>
+                                            <div class="land-services-tags" style="margin-top: 5px;">
+                                                <?php while($land_service = mysqli_fetch_assoc($land_services_result)) { ?>
+                                                <span class="land-service-tag"><?= htmlspecialchars($land_service['service_name']); ?></span>
+                                                <?php } ?>
+                                            </div>
+                                        </div>
+                                        <?php } else { ?>
+                                        <p class="mb-2" style="font-size: 12px; color: #999;"><em>No services requested for this land</em></p>
+                                        <?php } ?>
+                                        
                                         <button class="edit-land-btn" onclick="openEditLandModal(<?= $land['land_id']; ?>)">
                                             <i class="fas fa-edit mr-1"></i> Edit Land Info
                                         </button>
                                     </div>
                                 </div>
-                            <?php } ?>
+                            <?php 
+                                $land_index++;
+                            } 
+                            ?>
                         </div>
                     </div>
                     <?php 
@@ -895,11 +968,26 @@ if ($has_active_project && $lands_result) {
     font-size: 11px;
     margin: 2px;
 }
+.land-service-tag {
+    display: inline-block;
+    background: #fff3e0;
+    color: #e65100;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 10px;
+    margin: 2px;
+    font-weight: 600;
+}
 .services-tags {
     display: flex;
     flex-wrap: wrap;
     gap: 5px;
     margin-bottom: 15px;
+}
+.land-services-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
 }
 .status-badge {
     padding: 6px 12px;
@@ -1067,6 +1155,14 @@ if ($has_active_project && $lands_result) {
 }
 textarea.form-control {
     color: #263a4f !important;
+}
+.alert {
+    display: flex;
+    align-items: center;
+}
+.alert i {
+    margin-right: 10px;
+    font-size: 18px;
 }
 </style>
 
