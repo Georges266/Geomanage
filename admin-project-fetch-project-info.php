@@ -1,4 +1,8 @@
 <?php
+// ========================================================================
+// FILE: admin-project-fetch-project-info.php (UPDATED)
+// Show editable total cost with calculated reference
+// ========================================================================
 include 'includes/connect.php';
 
 $project_id = (int)$_POST['project_id'];
@@ -13,9 +17,22 @@ if (!$row) {
     exit;
 }
 
-// Get assigned service requests for this project
+// Calculate current total cost from service requests
+$costQuery = "
+    SELECT COALESCE(SUM(sr.price), 0) as calculated_cost,
+           COUNT(sr.request_id) as request_count
+    FROM service_request sr
+    WHERE sr.project_id = $project_id
+";
+$costResult = mysqli_query($con, $costQuery);
+$costData = mysqli_fetch_assoc($costResult);
+$calculatedCost = floatval($costData['calculated_cost']);
+$requestCount = intval($costData['request_count']);
+$currentCost = floatval($row['total_cost']);
+
+// Get assigned service requests
 $serviceRequestsQuery = "
-    SELECT sr.request_id, sr.request_date, s.service_name, u.full_name as client_name
+    SELECT sr.request_id, sr.request_date, sr.price, s.service_name, u.full_name as client_name
     FROM service_request sr
     JOIN service s ON sr.service_id = s.service_id
     JOIN client c ON sr.client_id = c.client_id
@@ -24,9 +41,9 @@ $serviceRequestsQuery = "
 ";
 $serviceRequestsResult = mysqli_query($con, $serviceRequestsQuery);
 
-// Get available (unassigned) service requests
+// Get available service requests
 $availableRequestsQuery = "
-    SELECT sr.request_id, sr.request_date, s.service_name, u.full_name as client_name
+    SELECT sr.request_id, sr.request_date, sr.price, s.service_name, u.full_name as client_name
     FROM service_request sr
     JOIN service s ON sr.service_id = s.service_id
     JOIN client c ON sr.client_id = c.client_id
@@ -108,7 +125,7 @@ $availableEquipmentResult = mysqli_query($con, $availableEquipmentQuery);
     </div>
 
     <!-- Current Lead Engineer Info -->
-    <?php if ($leadEngineer): ?> <!--checks if $leadEngineer exists (is not empty or null).-->
+    <?php if ($leadEngineer): ?>
     <div class="alert alert-info mt-2" style="padding: 10px; font-size: 13px;">
         <strong>Current Lead Engineer:</strong> <?php echo htmlspecialchars($leadEngineer['full_name']); ?>
     </div>
@@ -119,26 +136,92 @@ $availableEquipmentResult = mysqli_query($con, $availableEquipmentQuery);
         <textarea id="Project_Description" class="form-control" rows="3"><?php echo htmlspecialchars($row['description']); ?></textarea>
     </div>
 
-    <div class="form-group mt-2">
-        <label>Total Cost</label>
-        <textarea id="Total_Cost" class="form-control" rows="3"><?php echo htmlspecialchars($row['total_cost']); ?></textarea>
+    <!-- EDITABLE TOTAL COST WITH CALCULATED REFERENCE -->
+    <div class="form-group mt-3">
+        <label style="display: flex; align-items: center; justify-content: space-between;">
+            <span style="display: flex; align-items: center; gap: 8px;">
+                <i class="fas fa-dollar-sign" style="color: #ff7607;"></i>
+                Total Cost (USD)
+            </span>
+            <button type="button" 
+                    class="btn btn-sm btn-info" 
+                    onclick="useCostCalculated()"
+                    style="padding: 3px 10px; font-size: 11px;">
+                <i class="fas fa-sync-alt"></i> Use Calculated Cost
+            </button>
+        </label>
+        
+        <div style="position: relative;">
+            <input type="number" 
+                   id="Total_Cost" 
+                   name="Total_Cost"
+                   class="form-control" 
+                   value="<?php echo number_format($currentCost, 2, '.', ''); ?>"
+                   step="0.01"
+                   min="0"
+                   required
+                   style="font-weight: 600; color: #263a4f; font-size: 15px; padding-right: 100px;">
+            <span style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: #999; font-size: 13px; font-weight: 600;">
+                USD
+            </span>
+        </div>
+        
+        <!-- Calculated Cost Reference -->
+        <div style="margin-top: 8px; padding: 10px; background: #f0f8ff; border-left: 3px solid #2196f3; border-radius: 4px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <small style="color: #666; font-size: 12px; display: block;">
+                        <i class="fas fa-calculator"></i> 
+                        <strong>Auto-Calculated from Services:</strong>
+                    </small>
+                    <span style="color: #2196f3; font-size: 16px; font-weight: 700;" id="calculatedCostDisplay">
+                        $<?php echo number_format($calculatedCost, 2); ?>
+                    </span>
+                    <small style="color: #888; font-size: 11px; margin-left: 5px;">
+                        (<?php echo $requestCount; ?> service<?php echo $requestCount != 1 ? 's' : ''; ?>)
+                    </small>
+                </div>
+                <?php if (abs($currentCost - $calculatedCost) > 0.01): ?>
+                <div>
+                    <span style="background: #fff3cd; color: #856404; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 600;">
+                        <i class="fas fa-exclamation-triangle"></i> Custom Price
+                    </span>
+                </div>
+                <?php endif; ?>
+            </div>
+        </div>
+        
+        <small style="color: #666; font-size: 11px; margin-top: 5px; display: block;">
+            <i class="fas fa-info-circle"></i> 
+            You can manually adjust the total cost. Click "Use Calculated Cost" to reset to the auto-calculated amount.
+        </small>
+        
+        <!-- Hidden field to store calculated cost -->
+        <input type="hidden" id="calculated_cost_value" value="<?php echo number_format($calculatedCost, 2, '.', ''); ?>">
     </div>
 
     <!-- Assigned Service Requests -->
     <div class="form-group mt-3">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-            <label style="font-weight: 600; margin: 0;">Assigned Service Requests</label>
+            <label style="font-weight: 600; margin: 0;">
+                <i class="fas fa-list-ul"></i> Assigned Service Requests
+                <span style="background: #ff7607; color: white; padding: 2px 8px; border-radius: 12px; font-size: 11px; margin-left: 5px;">
+                    <?php echo $requestCount; ?>
+                </span>
+            </label>
             <button type="button" class="btn btn-sm btn-primary" onclick="toggleAddServiceRequests()" style="padding: 4px 12px; font-size: 12px;">
                 <i class="fas fa-plus"></i> Add Requests
             </button>
         </div>
         
-        <!-- Add Service Requests Section (Hidden by default) -->
+        <!-- Add Service Requests Section -->
         <div id="addServiceRequestsSection" style="display: none; margin-bottom: 15px; border: 2px solid #007bff; border-radius: 5px; padding: 10px; background: #f0f8ff;">
-            <h6 style="margin-bottom: 10px; color: #007bff;">Available Service Requests</h6>
+            <h6 style="margin-bottom: 10px; color: #007bff;">
+                <i class="fas fa-shopping-cart"></i> Available Service Requests
+            </h6>
             <div style="max-height: 200px; overflow-y: auto;">
                 <?php 
-                if ($availableRequestsResult && mysqli_num_rows($availableRequestsResult) > 0) {//mysqli_num_rows counts how many rows the query returned.
+                if ($availableRequestsResult && mysqli_num_rows($availableRequestsResult) > 0) {
                     while ($availSr = mysqli_fetch_assoc($availableRequestsResult)) {
                 ?>
                     <div style="padding: 8px; margin-bottom: 8px; background: white; border-radius: 4px; border: 1px solid #ddd;">
@@ -150,6 +233,9 @@ $availableEquipmentResult = mysqli_query($con, $availableEquipmentQuery);
                                 </p>
                                 <p style="margin: 3px 0; font-size: 12px; color: #666;">
                                     <strong>Client:</strong> <?php echo htmlspecialchars($availSr['client_name']); ?>
+                                </p>
+                                <p style="margin: 3px 0; font-size: 12px; color: #28a745; font-weight: 600;">
+                                    <strong>Price:</strong> $<?php echo number_format($availSr['price'], 2); ?>
                                 </p>
                             </div>
                             <button type="button" class="btn btn-sm btn-success" style="padding: 2px 8px; font-size: 11px;" onclick="addServiceRequest(<?php echo $availSr['request_id']; ?>)">
@@ -169,6 +255,7 @@ $availableEquipmentResult = mysqli_query($con, $availableEquipmentQuery);
             </button>
         </div>
 
+        <!-- Assigned Service Requests List -->
         <div style="border: 1px solid #ddd; border-radius: 5px; padding: 10px; max-height: 200px; overflow-y: auto; background: #f9f9f9;">
             <?php 
             if ($serviceRequestsResult && mysqli_num_rows($serviceRequestsResult) > 0) {
@@ -183,6 +270,9 @@ $availableEquipmentResult = mysqli_query($con, $availableEquipmentQuery);
                             </p>
                             <p style="margin: 3px 0; font-size: 12px; color: #666;">
                                 <strong>Client:</strong> <?php echo htmlspecialchars($sr['client_name']); ?>
+                            </p>
+                            <p style="margin: 3px 0; font-size: 12px; color: #28a745; font-weight: 600;">
+                                <strong>Price:</strong> $<?php echo number_format($sr['price'], 2); ?>
                             </p>
                             <p style="margin: 3px 0; font-size: 11px; color: #999;">
                                 Requested: <?php echo date('M d, Y', strtotime($sr['request_date'])); ?>
@@ -211,7 +301,6 @@ $availableEquipmentResult = mysqli_query($con, $availableEquipmentQuery);
             </button>
         </div>
 
-        <!-- Add Equipment Section (Hidden by default) -->
         <div id="addEquipmentSection" style="display: none; margin-bottom: 15px; border: 2px solid #007bff; border-radius: 5px; padding: 10px; background: #f0f8ff;">
             <h6 style="margin-bottom: 10px; color: #007bff;">Available Equipment</h6>
             <div style="max-height: 200px; overflow-y: auto;">
@@ -286,19 +375,39 @@ $availableEquipmentResult = mysqli_query($con, $availableEquipmentQuery);
 </form>
 
 <script>
-// Toggle add service requests section
+// Use calculated cost button
+function useCostCalculated() {
+    const calculatedCost = parseFloat($('#calculated_cost_value').val());
+    $('#Total_Cost').val(calculatedCost.toFixed(2));
+    
+    // Visual feedback
+    $('#Total_Cost').css({
+        'background': '#e8f5e9',
+        'border-color': '#4caf50'
+    });
+    
+    setTimeout(function() {
+        $('#Total_Cost').css({
+            'background': '',
+            'border-color': ''
+        });
+    }, 1000);
+    
+    showSuccessNotification('Cost updated to calculated amount: $' + calculatedCost.toFixed(2));
+}
+
+// Toggle sections
 function toggleAddServiceRequests() {
     $('#addServiceRequestsSection').slideToggle(300);
 }
 
-// Toggle add equipment section
 function toggleAddEquipment() {
     $('#addEquipmentSection').slideToggle(300);
 }
 
 // Handle form submission
 $('#editProjectForm').on('submit', function(e) {
-    e.preventDefault();//Do NOT reload the page and do NOT submit the form the normal way.
+    e.preventDefault();
     
     const projectData = {
         project_id: $('#edit_project_id').val(),
@@ -308,7 +417,7 @@ $('#editProjectForm').on('submit', function(e) {
         lead_engineer_id: $('#Lead_Engineer').val(),
         team_size: $('#Team_Size').val(),
         description: $('#Project_Description').val(),
-        Total_Cost: $('#Total_Cost').val()
+        total_cost: $('#Total_Cost').val() // ✅ Now included
     };
     
     $.ajax({
@@ -318,7 +427,7 @@ $('#editProjectForm').on('submit', function(e) {
         success: function(response) {
             alert('Project updated successfully!');
             closeModal('editProjectModal');
-            loadProjects(); // Reload the projects list
+            loadProjects();
         },
         error: function() {
             alert('Error updating project.');
@@ -326,7 +435,7 @@ $('#editProjectForm').on('submit', function(e) {
     });
 });
 
-// Add service request to project
+// Add service request - updates calculated cost reference
 function addServiceRequest(requestId) {
     $.ajax({
         url: 'admin-project-add-service-query.php',
@@ -336,9 +445,12 @@ function addServiceRequest(requestId) {
             project_id: $('#edit_project_id').val()
         },
         success: function(response) {
-          //  alert('Service request added successfully!');
-            // Reload the modal content
-             reloadProjectModal($('#edit_project_id').val()); // Cleaner!
+            if (response.trim() === 'success') {
+                showSuccessNotification('Service added! Calculated cost updated.');
+                reloadProjectModal($('#edit_project_id').val());
+            } else {
+                alert('Error: ' + response);
+            }
         },
         error: function() {
             alert('Error adding service request.');
@@ -346,7 +458,7 @@ function addServiceRequest(requestId) {
     });
 }
 
-// Remove service request from project
+// Remove service request - updates calculated cost reference
 function removeServiceRequest(requestId) {
     if (confirm('Remove this service request from the project?')) {
         $.ajax({
@@ -357,9 +469,12 @@ function removeServiceRequest(requestId) {
                 project_id: $('#edit_project_id').val()
             },
             success: function(response) {
-               // alert('Service request removed!');
-                // Reload the modal content
-                 reloadProjectModal($('#edit_project_id').val()); // Cleaner!
+                if (response.trim() === 'success') {
+                    showSuccessNotification('Service removed! Calculated cost updated.');
+                    reloadProjectModal($('#edit_project_id').val());
+                } else {
+                    alert('Error: ' + response);
+                }
             },
             error: function() {
                 alert('Error removing service request.');
@@ -368,7 +483,7 @@ function removeServiceRequest(requestId) {
     }
 }
 
-// Add equipment to project
+// Add equipment
 function addEquipment(equipmentId) {
     $.ajax({
         url: 'admin-project-add-equipment-query.php',
@@ -378,9 +493,7 @@ function addEquipment(equipmentId) {
             project_id: $('#edit_project_id').val()
         },
         success: function(response) {
-         //   alert('Equipment added successfully!');
-            // Reload the modal content
-            reloadProjectModal($('#edit_project_id').val()); // Cleaner!
+            reloadProjectModal($('#edit_project_id').val());
         },
         error: function() {
             alert('Error adding equipment.');
@@ -388,7 +501,7 @@ function addEquipment(equipmentId) {
     });
 }
 
-// Remove equipment from project
+// Remove equipment
 function removeEquipment(equipmentId) {
     if (confirm('Remove this equipment from the project?')) {
         $.ajax({
@@ -399,10 +512,7 @@ function removeEquipment(equipmentId) {
                 project_id: $('#edit_project_id').val()
             },
             success: function(response) {
-              //  alert('Equipment removed!');
-                // Reload the modal content
                 reloadProjectModal($('#edit_project_id').val());
-
             },
             error: function() {
                 alert('Error removing equipment.');
@@ -411,7 +521,7 @@ function removeEquipment(equipmentId) {
     }
 }
 
-// Delete entire project
+// Delete project
 function deleteProject(projectId) {
     if (confirm('Are you sure you want to delete this project? This action cannot be undone.')) {
         $.ajax({
@@ -421,7 +531,7 @@ function deleteProject(projectId) {
             success: function(response) {
                 alert('Project deleted successfully!');
                 closeModal('editProjectModal');
-                loadProjects(); // Reload the projects list
+                loadProjects();
             },
             error: function() {
                 alert('Error deleting project.');
@@ -430,11 +540,9 @@ function deleteProject(projectId) {
     }
 }
 
-
-
+// Reload modal
 function reloadProjectModal(projectId) {
-    // Show loading message
-    $("#editProjectModalBody").html('<p class="text-center">Loading...</p>');
+    $("#editProjectModalBody").html('<p class="text-center"><i class="fas fa-spinner fa-spin"></i> Updating...</p>');
     
     $.ajax({
         url: 'admin-project-fetch-project-info.php',
@@ -446,6 +554,26 @@ function reloadProjectModal(projectId) {
     });
 }
 
-
-
+// Success notification
+function showSuccessNotification(message) {
+    const notification = $('<div>')
+        .html('<i class="fas fa-check-circle"></i> ' + message)
+        .css({
+            position: 'fixed',
+            top: '20px',
+            right: '20px',
+            background: 'linear-gradient(135deg, #4caf50 0%, #66bb6a 100%)',
+            color: 'white',
+            padding: '15px 25px',
+            borderRadius: '8px',
+            boxShadow: '0 4px 12px rgba(76, 175, 80, 0.3)',
+            zIndex: 10001,
+            fontWeight: '500'
+        });
+    
+    $('body').append(notification);
+    notification.fadeIn(300).delay(2500).fadeOut(300, function() {
+        $(this).remove();
+    });
+}
 </script>

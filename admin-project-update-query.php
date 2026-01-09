@@ -9,7 +9,7 @@ $end_date = $_POST['end_date'];
 $lead_engineer_id = $_POST['lead_engineer_id'];
 $team_size = $_POST['team_size'];
 $description = mysqli_real_escape_string($con, $_POST['description']);
-$Total_Cost= $_POST['Total_Cost'];
+$Total_Cost= $_POST['total_cost'];
 
  
 

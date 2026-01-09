@@ -14,7 +14,7 @@ $revenueQuery = "
         DATE_FORMAT(start_date, '%Y-%m') as month,
         SUM(total_cost) as revenue
     FROM project
-    WHERE status = 'don' 
+    WHERE status = 'done' 
         AND YEAR(start_date) = $year
     GROUP BY DATE_FORMAT(start_date, '%Y-%m')
 ";

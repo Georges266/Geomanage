@@ -64,17 +64,17 @@ if ($status === 'assigned') {
 <?php
     }
 } elseif ($status === 'requested') {
-    // 🔹 Load REQUESTED equipment (equipment requested by this lead engineer's projects)
-    $query = "SELECT equipment.equipment_id, equipment.equipment_name, 
-               project.project_id, project.project_name,
-               service_request.request_id,
-               land.land_number, land.land_address
+    // ðŸ"¹ Load REQUESTED equipment
+    $query = "SELECT DISTINCT 
+               equipment.equipment_id, 
+               equipment.equipment_name, 
+               project.project_id, 
+               project.project_name
               FROM equipment
               JOIN uses_project_equipment ON uses_project_equipment.equipment_id = equipment.equipment_id
               JOIN project ON project.project_id = uses_project_equipment.project_id
-              LEFT JOIN service_request ON service_request.project_id = project.project_id
-              LEFT JOIN land ON land.land_id = service_request.land_id
-              WHERE project.lead_engineer_id = '$lead_engineer_id' and equipment.status='requested'
+              WHERE project.lead_engineer_id = '$lead_engineer_id' 
+              AND equipment.status='requested'
               ORDER BY project.project_name, equipment.equipment_name";
 
     $requestResult = mysqli_query($con, $query);
@@ -86,8 +86,17 @@ if ($status === 'assigned') {
             $equipment_name = htmlspecialchars($request['equipment_name']);
             $project_id = $request['project_id'];
             $project_name = htmlspecialchars($request['project_name']);
-            $land_number = htmlspecialchars($request['land_number'] ?? 'N/A');
-            $land_address = htmlspecialchars($request['land_address'] ?? 'N/A');
+            
+            // Get land info for this project (optional)
+            $landQuery = "SELECT land.land_number, land.land_address
+                         FROM service_request
+                         JOIN land ON land.land_id = service_request.land_id
+                         WHERE service_request.project_id = '$project_id'
+                         LIMIT 1";
+            $landResult = mysqli_query($con, $landQuery);
+            $land = mysqli_fetch_assoc($landResult);
+            $land_number = htmlspecialchars($land['land_number'] ?? 'N/A');
+            $land_address = htmlspecialchars($land['land_address'] ?? 'N/A');
 ?>
 <div class="col-lg-6 mb-3">
     <div class="card p-3 request-card">
@@ -120,7 +129,6 @@ if ($status === 'assigned') {
 <?php
     }
 }
-
 // Add CSS styling
 ?>
 <style>

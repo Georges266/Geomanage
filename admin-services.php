@@ -597,7 +597,7 @@ footer {
 </style>
 
 
-// Complete JavaScript section for admin-services.php
+
 
 <script>
 // Global variables

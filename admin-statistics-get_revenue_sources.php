@@ -28,7 +28,7 @@ $sqlProjects = "SELECT
                     DATE_FORMAT(p.start_date, '%Y-%m') as month,
                     SUM(p.total_cost) as revenue
                 FROM project p
-                WHERE p.status = 'don'
+                WHERE p.status = 'done'
                     AND YEAR(p.start_date) = $year
                 GROUP BY DATE_FORMAT(p.start_date, '%Y-%m')
                 ORDER BY month";

@@ -37,10 +37,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $projectDesc       = mysqli_real_escape_string($con, $_POST['Project_Description']);
     $Team_Size         = $_POST['Team_Size'];
     
-    // Insert project
+    // Insert project WITHOUT total_cost initially (will be calculated from service requests)
     $sqlProject = "INSERT INTO project 
-        (project_name, start_date, end_date, lead_engineer_id, team_size, description, status)
-        VALUES ('$projectName', '$startDate', '$endDate', '$leadEngineerId', '$Team_Size', '$projectDesc', 'active')";
+        (project_name, start_date, end_date, lead_engineer_id, team_size, description, status, total_cost)
+        VALUES ('$projectName', '$startDate', '$endDate', '$leadEngineerId', '$Team_Size', '$projectDesc', 'active', 0)";
 
     if (mysqli_query($con, $sqlProject)) {
         $projectId = mysqli_insert_id($con); // ID of the last project inserted
@@ -52,28 +52,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit();
         }
 
-        // Arrays to track lands for this project (avoid duplicates)
+        // Arrays to track lands and calculate total cost
         $processedLands = array();
+        $totalCost = 0; // Initialize total cost accumulator
 
-        // Update service requests with project ID AND get their land IDs
+        // Update service requests with project ID AND calculate total cost
         foreach ($_POST['approved_requests'] as $request_id) {
             $request_id = (int)$request_id; // Cast to int for safety
             
-            // Get the land_id for this service request
-           // Get client_id from service_request
-        $landQuery = "SELECT sr.land_id, sr.client_id 
-                    FROM service_request sr 
-                    WHERE sr.request_id = $request_id";
+            // Get the land_id, client_id, AND total_price for this service request
+            $landQuery = "SELECT sr.land_id, sr.client_id, sr.price 
+                         FROM service_request sr 
+                         WHERE sr.request_id = $request_id";
             $landResult = mysqli_query($con, $landQuery);
             
             if ($landResult && $landRow = mysqli_fetch_assoc($landResult)) {
                 $land_id = (int)$landRow['land_id'];
-            $client_id = (int)$landRow['client_id'];
+                $client_id = (int)$landRow['client_id'];
+                $requestPrice = floatval($landRow['price']); // Get price from service request
+                
+                // Add to total cost
+                $totalCost += $requestPrice;
                 
                 // Add to includes_project_land table (only if not already added)
                 if (!in_array($land_id, $processedLands)) {
-                $insertLandProject = "INSERT INTO includes_project_land (project_id, land_id, client_id) 
-                                    VALUES ($projectId, $land_id, $client_id)";
+                    $insertLandProject = "INSERT INTO includes_project_land (project_id, land_id, client_id) 
+                                        VALUES ($projectId, $land_id, $client_id)";
                     mysqli_query($con, $insertLandProject);
                     
                     // Mark this land as processed
@@ -88,6 +92,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             mysqli_query($con, $updateQuery);
         }
 
+        // Update project with calculated total cost
+        $updateCostQuery = "UPDATE project 
+                           SET total_cost = $totalCost 
+                           WHERE project_id = $projectId";
+        mysqli_query($con, $updateCostQuery);
+
         // Handle equipment assignment
         if (!empty($_POST['equipment'])) {
             foreach ($_POST['equipment'] as $equipmentId) {
@@ -98,8 +108,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        // Store success message in session
-        $_SESSION['success_message'] = "Project created successfully!";
+        // Store success message with calculated cost in session
+        $requestCount = count($_POST['approved_requests']);
+        $_SESSION['success_message'] = "Project created successfully! Total Cost: $" . number_format($totalCost, 2) . " (from $requestCount service request" . ($requestCount > 1 ? 's' : '') . ")";
         
         // REDIRECT to the same page (GET request)
         header("Location: admin-project.php");
