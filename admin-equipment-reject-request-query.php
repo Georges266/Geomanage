@@ -78,13 +78,13 @@ if ($equipment_id > 0 && $project_id > 0) {
         $mail->isSMTP();
         $mail->Host       = 'smtp.gmail.com';
         $mail->SMTPAuth   = true;
-        $mail->Username   = '92330378@students.liu.edu.lb';
-        $mail->Password   = 'chwg iudv ixdu fkfz';
+        $mail->Username   = '';
+        $mail->Password   = '';
         $mail->SMTPSecure = 'tls';
         $mail->Port       = 587;
 
         // Recipients
-        $mail->setFrom('92330378@students.liu.edu.lb', 'GeoManage Admin');
+        $mail->setFrom('', 'GeoManage Admin');
         $mail->addAddress($details['lead_email'], $details['lead_name']);
 
         // Try to embed the logo image, but don't fail if it doesn't exist

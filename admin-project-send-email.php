@@ -38,13 +38,13 @@ try {
     $mail->isSMTP();
     $mail->Host       = 'smtp.gmail.com';
     $mail->SMTPAuth   = true;
-    $mail->Username   = '92330378@students.liu.edu.lb';
-    $mail->Password   = 'chwg iudv ixdu fkfz';
+    $mail->Username   = '';
+    $mail->Password   = '';
     $mail->SMTPSecure = 'tls';
     $mail->Port       = 587;
 
     // Recipients
-    $mail->setFrom('92330378@students.liu.edu.lb', 'GeoManage Solutions');
+    $mail->setFrom('', 'GeoManage Solutions');
     $mail->addAddress($client_email, $client_name);
     $mail->addReplyTo('support@geomanage.com', 'GeoManage Support');
 
