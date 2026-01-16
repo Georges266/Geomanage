@@ -2,7 +2,7 @@
 
 > A full-stack web application for managing geospatial data, maintenance workflows, and land operations with automated pricing and ML-based predictions.
 
-[![GitHub](https://img.shields.io/badge/GitHub-Repository-blue)](https://github.com/Georges266/Geomanage.git)
+[![GitHub](https://img.shields.io/badge/GitHub-Repository-blue)](https://github.com/Eliehbk/Geomanage.git)
 
 ---
 
@@ -21,7 +21,7 @@
 
 ## 🎯 Overview
 
-GeoManage is a comprehensive enterprise-grade web application developed as a senior project, simulating real-world asset and land management systems used by municipalities, engineering firms, and property management companies.
+GeoManage is a comprehensive enterprise-grade web application developed as a senior project, simulating real-world asset and land management systems used by surveying engineering firms, municipalities, and property management companies.
 
 **The system demonstrates:**
 - Complex role-based access control (7 user roles)
@@ -31,12 +31,16 @@ GeoManage is a comprehensive enterprise-grade web application developed as a sen
 - Full CRUD operations with relational database design
 - Email automation and PDF/Excel report generation
 
+**Team**: Developed collaboratively by 2 software engineering students
+
 ---
 
 ## ✨ Key Features
 
 ### 🔧 Service Request & Project Workflow
 - **Client-initiated requests**: Clients create service requests for their land/property needs with document upload
+  - **Dual input methods**: Manual entry or interactive map drawing tool with auto-calculations
+  - Map tool automatically calculates area, perimeter, coordinates, and elevation
 - **Automatic pricing**: System calculates service cost instantly using engineering formulas
 - **Admin oversight**: 
   - View service requests with auto-calculated prices (editable if needed)
@@ -52,6 +56,17 @@ GeoManage is a comprehensive enterprise-grade web application developed as a sen
   - Manages project execution
 - **Real-time visibility**: All stakeholders see project updates instantly
 - **Equipment monitoring**: Track equipment status, maintenance history, and usage across the system
+
+### 🏘️ Land Marketplace
+- **Client land listings**: Clients can upload their land for sale on the marketplace
+  - Interactive map tool to draw land boundaries
+  - Automatic photo generation from drawn maps for listings
+  - Browse and search available land listings
+- **Salesperson approval workflow**: 
+  - Review all client-submitted land sale requests
+  - Approve or reject listings for marketplace
+  - Mark lands as "Sold" when transactions complete
+  - Track sales pipeline (pending → approved → sold)
 
 ### 💰 Intelligent Cost Calculation
 - **Automated pricing engine** using engineering-based formulas
@@ -71,6 +86,7 @@ GeoManage is a comprehensive enterprise-grade web application developed as a sen
 
 ### 🗺️ Advanced Geospatial Features
 - **Interactive mapping** with Leaflet integration
+- **Custom map drawing tool** for land boundary creation with auto-calculations
 - **Route optimization**: Distance calculation, travel time estimation
 - **Terrain analysis**: Elevation data, slope calculation, area measurement
 - **Satellite imagery**: Real-world view using free map providers
@@ -80,6 +96,19 @@ GeoManage is a comprehensive enterprise-grade web application developed as a sen
 - **ML model** for land price estimation based on features
 - **Decision support tool** for pricing strategy and market comparison
 - Advisory system that complements manual pricing
+- Clients can estimate their own land value
+
+### 👥 HR Management System
+- **Job posting management**: Create, edit, and manage job opportunities
+- **Application processing**: 
+  - Review submitted applications and CVs
+  - Hire, reject, or schedule interviews
+  - Automated rejection emails when positions close
+- **Interview scheduling**: Calendar-based appointment system with rescheduling
+- **Employee management**: 
+  - Promote employees to different roles
+  - Terminate employment
+  - Adjust salaries (increase/decrease)
 
 ### 📧 Client Delivery System
 - **Automated email summaries** upon project completion
@@ -88,6 +117,28 @@ GeoManage is a comprehensive enterprise-grade web application developed as a sen
 
 ### 👥 Role-Based Access Control (RBAC)
 Seven distinct user roles with granular permissions:
+- **Client**: 
+  - Upload land for sale on marketplace with map tool
+  - Request services (manual or map-based land entry)
+  - Track service requests and projects
+  - ML-based land valuation
+  - Apply for jobs at the firm
+- **HR**: 
+  - Manage job postings (create, open, close)
+  - Process applications (hire, reject, interview)
+  - Schedule and manage interviews
+  - Employee management (promote, fire, salary adjustments)
+- **Surveyor**: 
+  - View assigned projects and lands
+  - Update land information from field surveillance
+  - Upload missing documentation and deliverables
+  - Track assigned equipment
+  - Request equipment maintenance
+- **Salesperson**: 
+  - Review land sale requests
+  - Approve/reject marketplace listings
+  - Mark lands as sold
+  - Manage sales pipeline
 - **Admin**: 
   - Service request review and price editing
   - Access to all documents and land information
@@ -104,11 +155,11 @@ Seven distinct user roles with granular permissions:
   - Surveyor team building (within size constraints)
   - Project management and oversight
   - Can send project completion summary to client
-- **Surveyor**: Land assessment, data collection, technical documentation, team member on projects
-- **Technician**: Service execution, maintenance work
-- **Salesperson**: Client relations, land sales
-- **HR**: User management, salary administration
-- **Client**: Service request creation with document upload, project viewing based on payment status
+- **Maintenance Technician**: 
+  - Equipment maintenance request processing
+  - Issue documentation and tracking
+  - Maintenance history logging
+  - Equipment status updates
 
 ---
 
@@ -117,6 +168,7 @@ Seven distinct user roles with granular permissions:
 ### Complete Service Request to Project Flow
 ```
 Client submits service request + documents
+  (using map tool or manual entry)
               ↓
 System auto-calculates price
               ↓
@@ -135,9 +187,47 @@ Lead Engineer:
   • Builds surveyor team (within limit)
   • Manages project execution
               ↓
+Surveyors:
+  • Update land info from field surveillance
+  • Upload deliverables
+  • Track equipment
+              ↓
 Team completes project
               ↓
 Admin or Lead Engineer sends summary to client via email
+```
+
+### Land Sale Workflow
+```
+Client uploads land for sale
+  • Draws boundaries with map tool
+  • System generates listing photos
+              ↓
+Salesperson reviews request
+              ↓
+Salesperson approves for marketplace
+              ↓
+Land appears in public marketplace
+              ↓
+Transaction occurs
+              ↓
+Salesperson marks land as "Sold"
+```
+
+### HR Hiring Workflow
+```
+HR creates job posting
+              ↓
+Clients apply with CV upload
+              ↓
+HR reviews applications
+              ↓
+HR schedules interviews
+              ↓
+HR hires candidate
+  • Automatically creates employee record
+              ↓
+Employee assigned to role
 ```
 
 ### Financial Tracking
@@ -160,16 +250,19 @@ Admin generates financial reports (PDF/Excel)
 
 ### Database Design
 - **Normalized relational schema** (MySQL)
-- **Complex relationships**: Many-to-many (equipment-projects), one-to-many (users-requests)
+- **Complex relationships**: 
+  - Many-to-many (equipment-projects, surveyors-projects)
+  - One-to-many (users-requests, projects-lands, job_postings-applications)
 - **Referential integrity** with foreign key constraints
 - **Optimized queries** for performance
+- Tables include: lands, land_sales, service_requests, projects, job_postings, job_applications, interviews, employees, equipment_tracking
 
 ### Backend Engineering
 - **PHP-based MVC architecture**
 - **Server-side validation** and sanitization
 - **Session management** for authentication
 - **RESTful-style endpoints** for AJAX operations
-- **File upload handling** for bills and documents
+- **File upload handling** for CVs, bills, land documents, and deliverables
 
 ### Frontend Development
 - **Responsive design** (HTML5, CSS3, vanilla JavaScript)
@@ -177,13 +270,20 @@ Admin generates financial reports (PDF/Excel)
 - **Interactive forms** with client-side validation
 - **Map integration** with event handling
 - **Modular JavaScript** for maintainability
+- **Custom map drawing tool** with Leaflet.js
 
 ### Advanced Features
-- **Email automation** using PHP mailer
+- **Email automation** using PHPMailer
+  - Job application notifications
+  - Interview scheduling
+  - Mass rejection emails
+  - Land sale approvals
+  - Project completion summaries
 - **PDF generation** for reports
 - **Excel export** functionality
 - **Machine learning model integration** (Python model → PHP interface)
 - **Formula-based calculations** for engineering estimates
+- **Photo generation from map drawings**
 
 ---
 
@@ -203,6 +303,7 @@ Admin generates financial reports (PDF/Excel)
 │   • Data Validation                         │
 │   • Email & Report Generation               │
 │   • ML Model Interface                      │
+│   • File Upload Management                  │
 └──────────────────┬──────────────────────────┘
                    │ SQL Queries
                    ↓
@@ -213,6 +314,8 @@ Admin generates financial reports (PDF/Excel)
 │   • Service Requests                        │
 │   • Equipment & Bills                       │
 │   • Financial Records                       │
+│   • Job Postings & Applications             │
+│   • Land Sales & Marketplace                │
 └─────────────────────────────────────────────┘
 ```
 
@@ -254,15 +357,14 @@ Admin generates financial reports (PDF/Excel)
 
 1. **Clone the repository**
 ```bash
-git clone https://github.com/Georges266/Geomanage.git
+git clone https://github.com/Eliehbk/Geomanage.git
 cd Geomanage
 ```
 
 2. **Database Configuration**
    - Open phpMyAdmin at `http://localhost/phpmyadmin`
    - Create a new database: `geomanage`
-   - Import the SQL file: `database/geomanage.sql` (if provided)
-   - Or run the schema creation script
+   - Import the SQL file: `database/geomanage.sql`
 
 3. **Configure Database Connection**
 
@@ -290,9 +392,13 @@ http://localhost/Geomanage
 
 ### Default Login Credentials
 ```
-Admin:
-  Username: admin
-  Password: admin123
+Admin: admin / admin123
+Client: client1 / client123
+HR: hr1 / hr123
+Surveyor: surveyor1 / surveyor123
+Salesperson: sales1 / sales123
+Lead Engineer: engineer1 / engineer123
+Technician: tech1 / tech123
 
 (Change these immediately after first login)
 ```
@@ -308,9 +414,19 @@ Geomanage/
 ├── includes/            # Reusable PHP components
 ├── models/              # Data models and ML integration
 ├── views/               # Frontend pages
+│   ├── client/          # Client portal (marketplace, requests, ML)
+│   ├── hr/              # HR management (jobs, applications, interviews)
+│   ├── surveyor/        # Surveyor operations (projects, deliverables)
+│   ├── salesperson/     # Sales module (land approvals)
+│   ├── admin/           # Admin dashboard
+│   ├── engineer/        # Lead engineer management
+│   └── technician/      # Maintenance workflows
 ├── controllers/         # Business logic handlers
 ├── database/            # SQL schema and migrations
-├── uploads/             # User-uploaded files (bills, docs)
+├── uploads/             # User-uploaded files
+│   ├── cvs/             # Job application CVs
+│   ├── land_docs/       # Land documentation
+│   └── deliverables/    # Project deliverables
 ├── reports/             # Generated PDF/Excel files
 └── README.md
 ```
@@ -320,12 +436,16 @@ Geomanage/
 ## 📸 Demo & Screenshots
 
 > **Note**: Add screenshots here showcasing:
-> - Dashboard with statistics
+> - Client map drawing tool for land entry
+> - Land marketplace with listings
+> - HR application processing dashboard
+> - Surveyor project management
+> - Salesperson land approval interface
 > - Interactive map with land visualization
 > - Service request workflow
 > - Equipment assignment interface
 > - Financial reports
-> - Role-based views
+> - ML land valuation tool
 
 ---
 
@@ -337,8 +457,12 @@ This project demonstrates proficiency in:
 - Database normalization and query optimization
 - Role-based access control implementation
 - API integration (maps, ML models)
+- Geospatial programming with interactive tools
+- Machine learning model deployment
 - Financial calculation automation
+- HR workflow automation
 - Report generation and email automation
+- File upload and management systems
 - Version control and collaborative development
 - Real-world problem-solving for enterprise systems
 
@@ -352,16 +476,16 @@ This project demonstrates proficiency in:
 - [ ] Multi-language support (i18n)
 - [ ] Cloud deployment (AWS/Azure)
 - [ ] Automated testing suite (PHPUnit)
+- [ ] Payment gateway integration for services
+- [ ] Advanced analytics dashboard with charts
 
 ---
 
-## 👨‍💻 Developer
+## 👨‍💻 Developers
 
-**Georges**  
-Senior Project | Software Engineering  
-📧 [Contact Email]  
-🔗 [LinkedIn Profile]  
-💼 [Portfolio Website]
+**Team of 2 Software Engineering Students**
+
+Senior Project | Surveying Engineering Firm Management System
 
 ---
 
@@ -375,8 +499,8 @@ This project was developed as an academic senior project. Please contact for usa
 
 Special thanks to:
 - Project advisors and mentors
-- Team members who contributed
-- Open-source community for tools and libraries
+- Open-source community for tools and libraries (Leaflet.js, PHPMailer, scikit-learn)
+- Surveying engineering professionals for domain expertise
 
 ---
 
